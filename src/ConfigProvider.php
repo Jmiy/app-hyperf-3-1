@@ -7,14 +7,12 @@ namespace Business\Hyperf;
 //use Business\Hyperf\Process\RestartServiceProcess;
 use Business\Hyperf\Utils\Redis\Lua\LuaFactory;
 use Business\Hyperf\Utils\Redis\Lua\Contracts\LuaInterface;
-
 use Hyperf\Database\Schema\PostgresBuilder;
 use Hyperf\Database\Schema\Grammars\PostgresGrammar as SchemaGrammar;
 use Hyperf\Database\Query\Processors\PostgresProcessor;
 use Hyperf\Database\Query\Grammars\PostgresGrammar;
 use Hyperf\Database\PostgresConnection;
 use Hyperf\Database\Connectors\PostgresConnector;
-
 use GuzzleHttp\Client;
 use Hyperf\Cache\Driver\RedisDriver;
 use Hyperf\Database\Model\SoftDeletes;
@@ -25,11 +23,8 @@ use Hyperf\RateLimit\Aspect\RateLimitAnnotationAspect;
 use Hyperf\ServiceGovernanceNacos\NacosDriver;
 use Hyperf\ServiceGovernanceNacos\Client as ServiceGovernanceNacosClient;
 use Hyperf\Nacos\Config;
-
 use Hyperf\Coroutine\Concurrent as CoroutineConcurrent;
-
 use Hyperf\ConfigNacos\NacosDriver as ConfigNacosDriver;
-
 use Hyperf\Redis\Pool\RedisPool;
 use Hyperf\JsonRpc\JsonRpcHttpTransporter;
 
@@ -69,7 +64,7 @@ class ConfigProvider
                         RedisDriver::class => __DIR__ . '/../class_map/Hyperf/Cache/Driver/RedisDriver.php',
                         Driver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/Driver.php',
 
-                        CoroutineConcurrent::class => __DIR__ . '/../class_map/Hyperf/Utils/Coroutine/Concurrent.php',
+//                        CoroutineConcurrent::class => __DIR__ . '/../class_map/Hyperf/Utils/Coroutine/Concurrent.php',
                         CoroutineConcurrent::class => __DIR__ . '/../class_map/Hyperf/Coroutine/Concurrent.php',
 
                         RateLimitAnnotationAspect::class => __DIR__ . '/../class_map/Hyperf/RateLimit/Aspect/RateLimitAnnotationAspect.php',
