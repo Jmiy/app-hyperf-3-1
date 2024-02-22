@@ -9,12 +9,8 @@ declare(strict_types=1);
 namespace Business\Hyperf\Annotation;
 
 use Attribute;
-use Hyperf\Di\Annotation\AbstractAnnotation;
+//use Hyperf\Di\Annotation\AbstractAnnotation;
 
-/**
- * @Annotation
- * @Target({"CLASS","METHOD"})
- */
 #[Attribute(Attribute::TARGET_CLASS | Attribute::TARGET_METHOD)]
 class Service extends AbstractAnnotation
 {
