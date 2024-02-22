@@ -1,0 +1,51 @@
+{
+    "name": "jmiy/business-hyperf-3-1",
+    "type": "library",
+    "license": "MIT",
+    "minimum-stability": "dev",
+    "require": {
+        "php": ">=8.0",
+        "hyperf/async-queue": "^3.0.0",
+        "hyperf/constants": "^3.0.0",
+        "hyperf/signal": "^3.0.0",
+        "hyperf/snowflake": "^3.0.0",
+        "hyperf/tracer": "^3.0.0",
+        "hyperf/translation": "^3.0.0",
+        "hyperf/validation": "^3.0.0",
+        "jmiy/hyperf-ding-notice": "dev-master"
+    },
+    "autoload":{
+        "psr-4":{
+            "Business\\Hyperf\\":"src/"
+        },
+        "files": [
+            "src/Functions.php",
+            "src/Utils/Collection/Functions.php"
+        ]
+    },
+    "description": "",
+    "repositories": {
+        "packagist": {
+            "type": "composer",
+            "url": "https://mirrors.aliyun.com/composer/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "HyperfTest\\": "tests"
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "scripts": {
+        "test": "phpunit -c phpunit.xml --colors=always",
+        "analyse": "phpstan analyse --memory-limit 1024M -l 1 ./src",
+        "cs-fix": "php-cs-fixer fix $1"
+    },
+    "extra": {
+        "hyperf": {
+            "config": "Business\\Hyperf\\ConfigProvider"
+        }
+    }
+}
