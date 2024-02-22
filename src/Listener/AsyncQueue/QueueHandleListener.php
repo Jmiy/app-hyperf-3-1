@@ -29,6 +29,7 @@ use Throwable;
 
 use Business\Hyperf\Exception\Handler\AppExceptionHandler;
 use Business\Hyperf\Job\PublicJob;
+use function Hyperf\Config\config;
 
 #[Listener]
 class QueueHandleListener implements ListenerInterface
