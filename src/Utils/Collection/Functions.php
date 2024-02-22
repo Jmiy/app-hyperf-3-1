@@ -11,7 +11,6 @@ declare(strict_types=1);
  */
 namespace Business\Hyperf\Utils\Collection;
 
-use function Hyperf\Collection\data_get;
 /**
  * Get an item from an array or object using "dot" notation.
  *
@@ -23,5 +22,5 @@ use function Hyperf\Collection\data_get;
 function data_get($target, $key, $default = null)
 {
     $key = is_array($key) ? $key : explode('.', is_int($key) ? (string) $key : $key);
-    return data_get($target, $key, $default);
+    return \Hyperf\Collection\data_get($target, $key, $default);
 }
