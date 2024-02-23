@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace Hyperf\Cache\Driver;
 
+use function Hyperf\Collection\data_set;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Collection\Arr;
 use Hyperf\Cache\Exception\InvalidArgumentException;
 use Psr\Container\ContainerInterface;

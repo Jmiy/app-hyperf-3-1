@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Cdn;
 
+use function Hyperf\Collection\data_set;
 use Hyperf\Collection\Arr;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Utils\Response;

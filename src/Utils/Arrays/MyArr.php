@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Arrays;
 
+use function Hyperf\Collection\data_set;
 use Hyperf\Collection\Arr;
 
 class MyArr

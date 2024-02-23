@@ -13,6 +13,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Aspect;
 
+use function Business\Hyperf\Utils\Collection\data_get;
 use Business\Hyperf\Constants\Constant;
 use Hyperf\Di\Annotation\Aspect;
 use Hyperf\Di\Aop\AbstractAspect;

@@ -12,6 +12,9 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Aspect\Hyperf\Redis;
 
+use function Hyperf\Collection\data_set;
+use function Hyperf\Support\call;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Throwable;
 use Hyperf\Coroutine\Coroutine;
 use Hyperf\Di\Annotation\Aspect;

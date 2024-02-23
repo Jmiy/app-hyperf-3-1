@@ -9,6 +9,10 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+use Hyperf\Support\Network;
+use function Hyperf\Collection\data_set;
+use function Hyperf\Support\make;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Collection\Arr;
 use Hyperf\Coroutine\Coroutine;
@@ -16,7 +20,6 @@ use Hyperf\Stringable\Str;
 use Business\Hyperf\Utils\Arrays\MyArr;
 use Business\Hyperf\Log\Loger;
 use function Hyperf\Coroutine\go;
-
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Job\PublicJob;
 use Business\Hyperf\Service\BaseService;
@@ -31,7 +34,6 @@ use Psr\Http\Message\ServerRequestInterface;
 use Hyperf\Contract\TranslatorInterface;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use Psr\Log\LoggerInterface;
-use Hyperf\Utils\Network;
 
 if (!function_exists('getApplicationContainer')) {
     /**
@@ -655,7 +657,7 @@ if (!function_exists('getCountry')) {
 
         $ipIsValid = isValidIp($ip);
         $key = 'service';
-        $geoipData = geoip()->setConfig($key, config('geoip.service'))->getLocation($ip)->toArray();
+        $geoipData = geoip()->setConfig($key, \Hyperf\Config\config('geoip.service'))->getLocation($ip)->toArray();
         $country = data_get($geoipData, 'iso_code', '');
         if (empty($country)) {
 

@@ -9,6 +9,7 @@
 
 namespace Business\Hyperf\Service\Traits;
 
+use function Business\Hyperf\Utils\Collection\data_get;
 trait Aspect
 {
 

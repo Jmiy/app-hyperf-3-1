@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Cdn;
 
+use function Hyperf\Collection\data_set;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Utils\Context;
 use Business\Hyperf\Utils\Filesystem\Util;
@@ -61,7 +62,7 @@ class ResourcesCdn
 
     public static function getArea()
     {
-        $_area = explode('_', config('app.serverarea', ''));
+        $_area = explode('_', \Hyperf\Config\config('app.serverarea', ''));
         $area = end($_area);
         return $area;
     }

@@ -2,6 +2,8 @@
 
 namespace Business\Hyperf\Middleware;
 
+use function Hyperf\Collection\data_set;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Collection\Arr;
 use Carbon\Carbon;
 use Hyperf\HttpServer\Router\Dispatched;

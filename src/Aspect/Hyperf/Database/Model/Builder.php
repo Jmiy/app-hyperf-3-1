@@ -12,6 +12,9 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Aspect\Hyperf\Database\Model;
 
+use function Hyperf\Collection\data_set;
+use function Hyperf\Support\call;
+use function Business\Hyperf\Utils\Collection\data_get;
 use function Hyperf\Tappable\tap;
 use Business\Hyperf\Constants\Constant;
 
@@ -24,21 +27,6 @@ use Hyperf\Utils\Coroutine;
 #[Aspect(classes: [ModelBuilder::class . '::__call', ModelBuilder::class . '::firstOrCreate', ModelBuilder::class . '::updateOrCreate', ModelBuilder::class . '::update', ModelBuilder::class . '::firstOrNew'], annotations: [])]
 class Builder extends AbstractAspect
 {
-
-//    // 要切入的类或 Trait，可以多个，亦可通过 :: 标识到具体的某个方法，通过 * 可以模糊匹配
-//    public array $classes = [
-//        ModelBuilder::class . '::__call',
-//        ModelBuilder::class . '::firstOrCreate',
-//        ModelBuilder::class . '::updateOrCreate',
-//        ModelBuilder::class . '::update',
-//        ModelBuilder::class . '::firstOrNew',
-//    ];
-//
-//    // 要切入的注解，具体切入的还是使用了这些注解的类，仅可切入类注解和类方法注解
-//    public array $annotations = [
-////        SomeAnnotation::class,
-//    ];
-
     public static $dbOperation = [
         0 => Constant::DB_OPERATION_SELECT,
         1 => Constant::DB_OPERATION_INSERT,

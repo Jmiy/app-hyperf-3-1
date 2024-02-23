@@ -9,6 +9,8 @@
 
 namespace Business\Hyperf\Service\Traits;
 
+use function Business\Hyperf\Utils\Collection\data_get;
+use function Hyperf\Config\config;
 use Hyperf\Collection\Arr;
 use Hyperf\Coroutine\Coroutine;
 use Business\Hyperf\Constants\Constant;

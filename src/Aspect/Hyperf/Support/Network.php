@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Aspect\Hyperf\Support;
 
+use function Hyperf\Support\call;
+use function Hyperf\Config\config;
 use Hyperf\Di\Annotation\Aspect;
 use Hyperf\Di\Aop\AbstractAspect;
 use Hyperf\Di\Aop\ProceedingJoinPoint;

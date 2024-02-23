@@ -2,6 +2,8 @@
 
 namespace Business\Hyperf\Utils;
 
+use function Hyperf\Collection\data_set;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Collection\Arr;
 use Hyperf\Utils\ApplicationContext;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;

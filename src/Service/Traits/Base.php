@@ -9,6 +9,8 @@
 
 namespace Business\Hyperf\Service\Traits;
 
+use function Hyperf\Support\call;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Collection\Arr;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Utils\Curl;

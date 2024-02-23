@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Middleware\Auth;
 
+use function Hyperf\Config\config;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Context\ApplicationContext;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Service\MenuService;

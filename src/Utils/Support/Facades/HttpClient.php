@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Support\Facades;
 
+use function Hyperf\Support\make;
 use Hyperf\Collection\Arr;
 use GuzzleHttp\Client;
 use Hyperf\Guzzle\RetryMiddleware;

@@ -11,6 +11,7 @@ declare(strict_types=1);
  */
 namespace Hyperf\Coroutine;
 
+use function Hyperf\Support\make;
 use Business\Hyperf\Exception\Handler\AppExceptionHandler;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Contract\StdoutLoggerInterface;

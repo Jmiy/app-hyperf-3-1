@@ -9,6 +9,7 @@
 
 namespace Business\Hyperf\Service\Traits;
 
+use function Business\Hyperf\Utils\Collection\data_get;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Model\BaseModel;
 use Hyperf\Database\Model\Relations\Relation;

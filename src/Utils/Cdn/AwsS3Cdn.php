@@ -2,6 +2,8 @@
 
 namespace Business\Hyperf\Utils\Cdn;
 
+use function Hyperf\Collection\data_set;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Context\ApplicationContext;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Utils\Context;

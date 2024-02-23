@@ -2,6 +2,8 @@
 
 namespace GuzzleHttp;
 
+use function Business\Hyperf\Utils\Collection\data_get;
+use function Hyperf\Config\config;
 use Hyperf\Coroutine\Coroutine;
 use GuzzleHttp\Psr7\Request;
 use GuzzleHttp\Psr7\UriResolver;

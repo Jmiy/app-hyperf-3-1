@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Listener;
 
+use function Hyperf\Config\config;
 use Hyperf\Collection\Arr;
 use Hyperf\Database\Events\QueryExecuted;
 use Hyperf\Event\Annotation\Listener;

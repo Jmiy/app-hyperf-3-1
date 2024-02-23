@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Aspect;
 
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Di\Annotation\Aspect;
 use Hyperf\Di\Aop\AbstractAspect;
 use Hyperf\Di\Aop\ProceedingJoinPoint;

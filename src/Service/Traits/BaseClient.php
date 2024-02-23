@@ -9,6 +9,9 @@
 
 namespace Business\Hyperf\Service\Traits;
 
+use function Hyperf\Collection\data_set;
+use function Hyperf\Support\make;
+use function Hyperf\Config\config;
 use Hyperf\Collection\Arr;
 use Throwable;
 use function Hyperf\Coroutine\go;

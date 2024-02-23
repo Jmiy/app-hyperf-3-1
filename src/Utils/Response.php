@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils;
 
+use function Business\Hyperf\Utils\Collection\data_get;
 use Psr\Http\Message\ServerRequestInterface;
 use Business\Hyperf\Process\CustomProcess;
 use Business\Hyperf\Utils\Service\QueueService;

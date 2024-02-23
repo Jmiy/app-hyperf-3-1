@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Encryption;
 
+use function Hyperf\Support\make;
 use Hyperf\Stringable\Str;
 use function Hyperf\Tappable\tap;
 use Hyperf\Contract\ConfigInterface;

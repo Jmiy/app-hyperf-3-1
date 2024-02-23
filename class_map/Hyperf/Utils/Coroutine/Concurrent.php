@@ -11,6 +11,7 @@ declare(strict_types=1);
  */
 namespace Hyperf\Utils\Coroutine;
 
+use function Hyperf\Support\make;
 use Hyperf\Coroutine\Coroutine;
 use Hyperf\Context\ApplicationContext;
 use Business\Hyperf\Exception\Handler\AppExceptionHandler;

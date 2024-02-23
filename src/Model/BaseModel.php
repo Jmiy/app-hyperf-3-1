@@ -12,6 +12,9 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Model;
 
+use function Hyperf\Support\make;
+use function Hyperf\Config\config;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Collection\Arr;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Utils\Arrays\MyArr;

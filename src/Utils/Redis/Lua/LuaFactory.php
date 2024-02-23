@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Redis\Lua;
 
+use function Hyperf\Support\make;
 class LuaFactory
 {
     /**

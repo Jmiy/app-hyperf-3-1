@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Utils\Support\Facades;
 
+use function Hyperf\Support\make;
 use Business\Hyperf\Utils\Exception\OperatorNotFoundException;
 use Business\Hyperf\Utils\Contracts\Redis\Lua\OperatorInterface;
 use Business\Hyperf\Utils\Contracts\Redis\Lua\BatchFuzzyDelete;

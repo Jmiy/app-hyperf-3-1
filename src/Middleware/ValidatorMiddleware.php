@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Middleware;
 
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\HttpServer\Contract\RequestInterface;
 use Business\Hyperf\Utils\PublicValidator;
 use Hyperf\HttpServer\Router\Dispatched;

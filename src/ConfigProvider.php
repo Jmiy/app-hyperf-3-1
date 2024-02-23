@@ -18,7 +18,7 @@ use Hyperf\Cache\Driver\RedisDriver;
 use Hyperf\Database\Model\SoftDeletes;
 use Hyperf\Database\Model\SoftDeletingScope;
 use Hyperf\Database\Model\Relations\HasManyThrough;
-use Hyperf\AsyncQueue\Driver\Driver;
+//use Hyperf\AsyncQueue\Driver\Driver;
 use Hyperf\RateLimit\Aspect\RateLimitAnnotationAspect;
 use Hyperf\ServiceGovernanceNacos\NacosDriver;
 use Hyperf\ServiceGovernanceNacos\Client as ServiceGovernanceNacosClient;
@@ -27,6 +27,7 @@ use Hyperf\Coroutine\Concurrent as CoroutineConcurrent;
 use Hyperf\ConfigNacos\NacosDriver as ConfigNacosDriver;
 use Hyperf\Redis\Pool\RedisPool;
 use Hyperf\JsonRpc\JsonRpcHttpTransporter;
+use Hyperf\ServiceGovernance\Listener\RegisterServiceListener;
 
 class ConfigProvider
 {
@@ -62,14 +63,15 @@ class ConfigProvider
 
                         Client::class => __DIR__ . '/../class_map/GuzzleHttp/Client.php',
                         RedisDriver::class => __DIR__ . '/../class_map/Hyperf/Cache/Driver/RedisDriver.php',
-                        Driver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/Driver.php',
+//                        Driver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/Driver.php',
 
-//                        CoroutineConcurrent::class => __DIR__ . '/../class_map/Hyperf/Utils/Coroutine/Concurrent.php',
+//                        Concurrent::class => __DIR__ . '/../class_map/Hyperf/Utils/Coroutine/Concurrent.php',
                         CoroutineConcurrent::class => __DIR__ . '/../class_map/Hyperf/Coroutine/Concurrent.php',
 
                         RateLimitAnnotationAspect::class => __DIR__ . '/../class_map/Hyperf/RateLimit/Aspect/RateLimitAnnotationAspect.php',
 
                         ConfigNacosDriver::class => __DIR__ . '/../class_map/Hyperf/ConfigNacos/NacosDriver.php',
+                        RegisterServiceListener::class => __DIR__ . '/../class_map/Hyperf/ServiceGovernance/Listener/RegisterServiceListener.php',
                         NacosDriver::class => __DIR__ . '/../class_map/Hyperf/ServiceGovernanceNacos/NacosDriver.php',
                         ServiceGovernanceNacosClient::class => __DIR__ . '/../class_map/Hyperf/ServiceGovernanceNacos/Client.php',
                         Config::class => __DIR__ . '/../class_map/Hyperf/Nacos/Config.php',

@@ -2,6 +2,8 @@
 
 namespace Business\Hyperf\Utils\Support\Facades;
 
+use function Hyperf\Config\config;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Redis\RedisFactory;
 

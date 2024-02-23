@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Utils;
 
+use function Hyperf\Support\call;
 use Hyperf\Context\Context as HyperfContext;
 
 class Context extends HyperfContext

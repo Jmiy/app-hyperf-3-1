@@ -2,6 +2,9 @@
 
 namespace Business\Hyperf\Utils\Cdn;
 
+use function Hyperf\Collection\data_set;
+use function Hyperf\Config\config;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Context\ApplicationContext;
 use Business\Hyperf\Services\DictStoreService;
 use Business\Hyperf\Utils\Context;

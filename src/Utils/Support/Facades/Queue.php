@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Support\Facades;
 
+use function Hyperf\Support\make;
 use Hyperf\Context\ApplicationContext;
 use Hyperf\AsyncQueue\Driver\DriverFactory;
 use Hyperf\AsyncQueue\Driver\DriverInterface;

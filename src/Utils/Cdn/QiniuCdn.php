@@ -393,7 +393,7 @@ class QiniuCdn extends ResourcesCdn {
         //获取资源cdn数据
         switch ($resourceType) {
             case 1://1:图片
-                $resourcesWh = config('resources');
+                $resourcesWh = \Hyperf\Config\config('resources');
                 $resourcesWhData = Resources::getResourcesWh($resourcesWh);
                 foreach ($resourcesWhData as $wh) {
                     $urlParam = static::getUrlParam($wh, 0);

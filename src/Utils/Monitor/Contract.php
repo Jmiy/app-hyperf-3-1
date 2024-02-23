@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Monitor;
 
+use function Hyperf\Support\call;
 use Hyperf\Collection\Arr;
 
 class Contract {

@@ -2,6 +2,9 @@
 
 namespace Business\Hyperf\Utils\Support\Facades;
 
+use function Hyperf\Support\make;
+use function Hyperf\Support\call;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Collection\Arr;
 use Hyperf\Coroutine\Concurrent;
 use Business\Hyperf\Constants\Constant;

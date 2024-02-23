@@ -2,6 +2,8 @@
 
 namespace Business\Hyperf\Middleware\Translator;
 
+use function Hyperf\Collection\data_set;
+use function Business\Hyperf\Utils\Collection\data_get;
 use Business\Hyperf\Services\DictStoreService;
 use Business\Hyperf\Services\Platform\OrderService;
 use Business\Hyperf\Constants\Constant;

@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Cdn;
 
+use function Hyperf\Collection\data_set;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Utils\Context;
 use Hyperf\Coroutine\Coroutine;

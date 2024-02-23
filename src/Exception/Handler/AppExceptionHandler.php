@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Exception\Handler;
 
+use function Business\Hyperf\Utils\Collection\data_get;
+use function Hyperf\Config\config;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Exception\BusinessException;
 use Hyperf\Context\Context;

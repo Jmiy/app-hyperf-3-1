@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Utils\Redis\Lua;
 
+use function Hyperf\Support\make;
 use Hyperf\Context\ApplicationContext;
 use Business\Hyperf\Utils\Redis\Lua\Contracts\LuaInterface;
 use Business\Hyperf\Utils\Redis\Lua\Exception\OperatorNotFoundException;
