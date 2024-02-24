@@ -76,9 +76,9 @@ class ConfigProvider
                         ServiceGovernanceNacosClient::class => __DIR__ . '/../class_map/Hyperf/ServiceGovernanceNacos/Client.php',
                         Config::class => __DIR__ . '/../class_map/Hyperf/Nacos/Config.php',
 
-                        RedisPool::class => __DIR__ . '/../class_map/Hyperf/Redis/Pool/RedisPool.php',
+//                        RedisPool::class => __DIR__ . '/../class_map/Hyperf/Redis/Pool/RedisPool.php',
 
-//                        JsonRpcHttpTransporter::class => __DIR__ . '/../class_map/Hyperf/JsonRpc/JsonRpcHttpTransporter.php',
+                        JsonRpcHttpTransporter::class => __DIR__ . '/../class_map/Hyperf/JsonRpc/JsonRpcHttpTransporter.php',
                     ],
                 ],
             ],
