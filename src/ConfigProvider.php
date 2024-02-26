@@ -18,6 +18,7 @@ use Hyperf\Cache\Driver\RedisDriver;
 use Hyperf\Database\Model\SoftDeletes;
 use Hyperf\Database\Model\SoftDeletingScope;
 use Hyperf\Database\Model\Relations\HasManyThrough;
+
 //use Hyperf\AsyncQueue\Driver\Driver;
 use Hyperf\RateLimit\Aspect\RateLimitAnnotationAspect;
 use Hyperf\ServiceGovernanceNacos\NacosDriver;
@@ -28,6 +29,10 @@ use Hyperf\ConfigNacos\NacosDriver as ConfigNacosDriver;
 use Hyperf\Redis\Pool\RedisPool;
 use Hyperf\JsonRpc\JsonRpcHttpTransporter;
 use Hyperf\ServiceGovernance\Listener\RegisterServiceListener;
+
+use OSS\Model\ObjectVersionListInfo;
+use OSS\Signer\SignerV1;
+use OSS\Signer\SignerV4;
 
 class ConfigProvider
 {
@@ -79,6 +84,10 @@ class ConfigProvider
 //                        RedisPool::class => __DIR__ . '/../class_map/Hyperf/Redis/Pool/RedisPool.php',
 
                         JsonRpcHttpTransporter::class => __DIR__ . '/../class_map/Hyperf/JsonRpc/JsonRpcHttpTransporter.php',
+
+                        ObjectVersionListInfo::class => __DIR__ . '/../class_map/OSS/Model/ObjectVersionListInfo.php',
+                        SignerV1::class => __DIR__ . '/../class_map/OSS/Signer/SignerV1.php',
+                        SignerV4::class => __DIR__ . '/../class_map/OSS/Signer/SignerV4.php',
                     ],
                 ],
             ],
