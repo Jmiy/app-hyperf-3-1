@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+
 /**
  * This file is part of Hyperf.
  *
@@ -9,6 +10,7 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 use Hyperf\Support\Network;
 use function Hyperf\Collection\data_set;
 use function Hyperf\Support\make;
@@ -118,8 +120,8 @@ if (!function_exists('pushQueue')) {
             $job = PublicJob::class;
         }
 
-        $retryPush = 0;
-        pushBeginning:
+//        $retryPush = 0;
+//        pushBeginning:
         try {
             return Queue::push($job, $data, $delay, $connection, $channel);
         } catch (Throwable $exc) {
@@ -128,11 +130,11 @@ if (!function_exists('pushQueue')) {
                 throw $exc;
             });
 
-            if ($retryPush < 10) {
-                $retryPush = $retryPush + 1;
-                Coroutine::sleep(rand(3, 10));
-                goto pushBeginning;
-            }
+//            if ($retryPush < 10) {
+//                $retryPush = $retryPush + 1;
+//                Coroutine::sleep(rand(3, 10));
+//                goto pushBeginning;
+//            }
         }
 
         return false;
