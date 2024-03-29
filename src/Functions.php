@@ -120,21 +120,21 @@ if (!function_exists('pushQueue')) {
             $job = PublicJob::class;
         }
 
-//        $retryPush = 0;
-//        pushBeginning:
+        $retryPush = 0;
+        pushBeginning:
         try {
             return Queue::push($job, $data, $delay, $connection, $channel);
         } catch (Throwable $exc) {
 
+            if ($retryPush < 10) {
+                $retryPush = $retryPush + 1;
+                Coroutine::sleep(rand(3, 10));
+                goto pushBeginning;
+            }
+
             go(function () use ($exc) {
                 throw $exc;
             });
-
-//            if ($retryPush < 10) {
-//                $retryPush = $retryPush + 1;
-//                Coroutine::sleep(rand(3, 10));
-//                goto pushBeginning;
-//            }
         }
 
         return false;

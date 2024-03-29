@@ -38,7 +38,7 @@ trait Queue
         ?array $extData = [
             Constant::RETRY_MAX => 3,
             Constant::SLEEP_MIN => 0,
-            Constant::SLEEP_MAX => 1,
+            Constant::SLEEP_MAX => 10,
         ],
         ?array $request = null
     ): bool
@@ -53,22 +53,22 @@ trait Queue
 
         $job = getJobData($callback, $method, $parameters, $request, $extData);
 
-        return pushQueue($job);
+//        return pushQueue($job);
 
-//        $isPush = true;
-//        $retryMax = data_get($extData, Constant::RETRY_MAX, 3);
-//        $sleepMin = data_get($extData, Constant::SLEEP_MIN, 0);
-//        $sleepMax = data_get($extData, Constant::SLEEP_MAX, 1);
-//        for ($i = 0; $i < $retryMax; $i++) {
-//            $isPush = pushQueue($job);
-//            if ($isPush) {
-//                break;
-//            }
-//            //如果压入队列失败，就睡眠 $sleepMin-$sleepMax，等待redis恢复
-//            Coroutine::sleep(rand($sleepMin, $sleepMax));
-//        }
-//
-//        return $isPush;
+        $isPush = true;
+        $retryMax = data_get($extData, Constant::RETRY_MAX, 3);
+        $sleepMin = data_get($extData, Constant::SLEEP_MIN, 0);
+        $sleepMax = data_get($extData, Constant::SLEEP_MAX, 1);
+        for ($i = 0; $i < $retryMax; $i++) {
+            $isPush = pushQueue($job);
+            if ($isPush) {
+                break;
+            }
+            //如果压入队列失败，就睡眠 $sleepMin-$sleepMax，等待redis恢复
+            Coroutine::sleep(rand($sleepMin, $sleepMax));
+        }
+
+        return $isPush;
     }
 
     /**
