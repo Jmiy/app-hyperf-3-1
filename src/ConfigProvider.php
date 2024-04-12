@@ -21,18 +21,26 @@ use Hyperf\Database\Model\Relations\HasManyThrough;
 
 //use Hyperf\AsyncQueue\Driver\Driver;
 use Hyperf\RateLimit\Aspect\RateLimitAnnotationAspect;
+
+use Hyperf\Nacos\Config;
+use Hyperf\ConfigNacos\NacosClient as ConfigNacosClient;
+use Hyperf\ConfigNacos\Client as ConfigClient;
+use Hyperf\ConfigNacos\NacosDriver as ConfigNacosDriver;
+
 use Hyperf\ServiceGovernanceNacos\NacosDriver;
 use Hyperf\ServiceGovernanceNacos\Client as ServiceGovernanceNacosClient;
-use Hyperf\Nacos\Config;
-use Hyperf\Coroutine\Concurrent as CoroutineConcurrent;
-use Hyperf\ConfigNacos\NacosDriver as ConfigNacosDriver;
-use Hyperf\Redis\Pool\RedisPool;
+
 use Hyperf\JsonRpc\JsonRpcHttpTransporter;
 use Hyperf\ServiceGovernance\Listener\RegisterServiceListener;
+
+use Hyperf\Redis\Pool\RedisPool;
+use Hyperf\Coroutine\Concurrent as CoroutineConcurrent;
 
 use OSS\Model\ObjectVersionListInfo;
 use OSS\Signer\SignerV1;
 use OSS\Signer\SignerV4;
+
+
 
 class ConfigProvider
 {
@@ -75,11 +83,15 @@ class ConfigProvider
 
                         RateLimitAnnotationAspect::class => __DIR__ . '/../class_map/Hyperf/RateLimit/Aspect/RateLimitAnnotationAspect.php',
 
+                        ConfigNacosClient::class => __DIR__ . '/../class_map/Hyperf/ConfigNacos/NacosClient.php',
+                        ConfigClient::class => __DIR__ . '/../class_map/Hyperf/ConfigNacos/Client.php',
                         ConfigNacosDriver::class => __DIR__ . '/../class_map/Hyperf/ConfigNacos/NacosDriver.php',
+
                         RegisterServiceListener::class => __DIR__ . '/../class_map/Hyperf/ServiceGovernance/Listener/RegisterServiceListener.php',
+                        Config::class => __DIR__ . '/../class_map/Hyperf/Nacos/Config.php',
                         NacosDriver::class => __DIR__ . '/../class_map/Hyperf/ServiceGovernanceNacos/NacosDriver.php',
                         ServiceGovernanceNacosClient::class => __DIR__ . '/../class_map/Hyperf/ServiceGovernanceNacos/Client.php',
-                        Config::class => __DIR__ . '/../class_map/Hyperf/Nacos/Config.php',
+
 
 //                        RedisPool::class => __DIR__ . '/../class_map/Hyperf/Redis/Pool/RedisPool.php',
 
