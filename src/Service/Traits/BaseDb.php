@@ -680,10 +680,11 @@ trait BaseDb
      */
     public static function getLockKey(string|array $connection, string|array $table, array $lockKeys = [])
     {
+        $prefix = "{" . env('APP_NAME', 'skeleton') . "}";
         return strtolower(implode(':', array_filter(
                     Arr::collapse(
                         [
-                            ['{lock}'],
+                            [$prefix, 'lock'],
                             is_array($connection) ? $connection : [$connection],
                             is_array($table) ? $table : [$table],
                             $lockKeys
