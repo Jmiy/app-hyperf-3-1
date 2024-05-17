@@ -698,10 +698,17 @@ trait BaseDb
 
     /**
      * 处理数据库连接和表参数
-     * @param array $parameters 数据库连接 默认：default
-     * @return bool|int
+     * @param string|array $connection 数据库连接 默认：default
+     * @param string|array $table 表名
+     * @param bool|null $isThrowableDropTable 是否异常删除表 true:是 false:否 默认：false
+     * @return array
+     * @throws \Throwable
      */
-    public static function handleParameters(string|array $connection, string|array $table)
+    public static function handleParameters(
+        string|array $connection,
+        string|array $table,
+        ?bool $isThrowableDropTable = false
+    )
     {
         $platform = $connection;
         $_table = $table;
@@ -724,7 +731,7 @@ trait BaseDb
                 $tableData = [
                     config(Constant::DATABASES . Constant::LINKER . $connection . Constant::LINKER . 'prefix') . $table => config(Constant::DATABASES . Constant::LINKER . $connection . Constant::LINKER . 'table_template' . Constant::LINKER . (static::getModelAlias()::TABLE_PREFIX))
                 ];
-                static::createTable($connection, $tableData, false);
+                static::createTable($connection, $tableData, false, $isThrowableDropTable);
 
                 $redis->set($key, 1, $expiryTime);
             }
@@ -872,13 +879,18 @@ trait BaseDb
      * @param string|array $table 表名 默认使用model配置的表名
      * @param array $data 数据
      * @param bool|null $isGetId 是否返回 id true:是 false:否
+     * @param bool|null $isThrowableDropTable 是否异常删除表 true:是 false:否 默认：false
      * @return bool|int
      */
-    public static function insertData(string|array $connection, string|array $table, array $data, ?bool $isGetId = false)
+    public static function insertData(
+        string|array $connection,
+        string|array $table,
+        array $data,
+        ?bool $isGetId = false,
+        ?bool $isThrowableDropTable = false
+    )
     {
-        $baseConfig = static::handleParameters($connection, $table);
-//        $connection = data_get($baseConfig, Constant::CONNECTION);
-//        $table = data_get($baseConfig, Constant::DB_EXECUTION_PLAN_TABLE);
+        static::handleParameters($connection, $table, $isThrowableDropTable);
 
         return static::insert($data, $isGetId, $connection, $table);
     }
@@ -889,13 +901,19 @@ trait BaseDb
      * @param string|array $table 表名 默认使用model配置的表名
      * @param string|array $where 更新的条件
      * @param array $data 更新的数据
+     * @param bool|null $isThrowableDropTable 是否异常删除表 true:是 false:否 默认：false
      * @return bool
      */
-    public static function updateData(string|array $connection, string|array $table, string|array $where, array $data, ?array $handleData = [])
+    public static function updateData(
+        string|array $connection,
+        string|array $table,
+        string|array $where,
+        array $data,
+        ?array $handleData = [],
+        ?bool $isThrowableDropTable = false
+    )
     {
-        $baseConfig = static::handleParameters($connection, $table);
-//        $connection = data_get($baseConfig, Constant::CONNECTION);
-//        $table = data_get($baseConfig, Constant::DB_EXECUTION_PLAN_TABLE);
+        static::handleParameters($connection, $table, $isThrowableDropTable);
 
         return static::update($where, $data, $handleData, $connection, $table);
     }
@@ -905,35 +923,48 @@ trait BaseDb
      * @param string|array $connection 数据库连接 默认：default
      * @param string|array $table 表名 默认使用model配置的表名
      * @param string|array $where 删除条件
-     * @return bool
+     * @param array|null $handleData 执行数据库操作前必须通过的校验
+     * @param bool|null $isThrowableDropTable 是否异常删除表 true:是 false:否 默认：false
+     * @return bool|int
+     * @throws \Throwable
      */
-    public static function deleteData(string|array $connection, string|array $table, string|array $where, ?array $handleData = [])
+    public static function deleteData(
+        string|array $connection,
+        string|array $table,
+        string|array $where,
+        ?array $handleData = [],
+        ?bool $isThrowableDropTable = false
+    )
     {
-        $baseConfig = static::handleParameters($connection, $table);
-//        $connection = data_get($baseConfig, Constant::CONNECTION);
-//        $table = data_get($baseConfig, Constant::DB_EXECUTION_PLAN_TABLE);
+        static::handleParameters($connection, $table, $isThrowableDropTable);
 
         return static::delete($where, $handleData, $connection, $table); //逻辑删除
     }
 
     /**
-     * 更新或者新增记录
-     * @param string|null $connection 数据库连接 默认：default
-     * @param string|null $table 表名 默认使用model配置的表名
-     * @param array $where where条件
+     * @param string|array $connection 数据库连接 默认：default
+     * @param string|array $table 表名 默认使用model配置的表名
+     * @param string|array $where where条件
      * @param array $data 数据
      * @param array|null $handleData 执行数据库操作前必须通过的校验
+     * @param bool|null $isThrowableDropTable 是否异常删除表 true:是 false:否 默认：false
      * @return array [
      *        'lock' => $lock,
      *        'dbOperation' => data_get($rs, 'dbOperation', 'no'),
      *        'data' => $rs,
      *    ];
+     * @throws \Throwable
      */
-    public static function updateOrCreateData(string|array $connection, string|array $table, string|array $where, array $data, ?array $handleData = [])
+    public static function updateOrCreateData(
+        string|array $connection,
+        string|array $table,
+        string|array $where,
+        array $data,
+        ?array $handleData = [],
+        ?bool $isThrowableDropTable = false
+    )
     {
-        $baseConfig = static::handleParameters($connection, $table);
-//        $connection = data_get($baseConfig, Constant::CONNECTION);
-//        $table = data_get($baseConfig, Constant::DB_EXECUTION_PLAN_TABLE);
+        static::handleParameters($connection, $table, $isThrowableDropTable);
 
         return static::updateOrCreate($where, $data, $handleData, $connection, $table); //更新或者新增记录
     }
