@@ -9,6 +9,7 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace Hyperf\JsonRpc;
 
 use GuzzleHttp\Client;
@@ -46,10 +47,10 @@ class JsonRpcHttpTransporter implements TransporterInterface
 
     public function __construct(private ClientFactory $clientFactory, array $config = [])
     {
-        if (! isset($config['recv_timeout'])) {
+        if (!isset($config['recv_timeout'])) {
             $config['recv_timeout'] = $this->recvTimeout;
         }
-        if (! isset($config['connect_timeout'])) {
+        if (!isset($config['connect_timeout'])) {
             $config['connect_timeout'] = $this->connectTimeout;
         }
         $this->clientOptions = $config;
@@ -64,7 +65,7 @@ class JsonRpcHttpTransporter implements TransporterInterface
             if ($node->schema !== null) {
                 $schema = $node->schema;
             }
-            if (! in_array($schema, ['http', 'https'])) {
+            if (!in_array($schema, ['http', 'https'])) {
                 $schema = 'http';
             }
             $schema .= '://';
@@ -72,7 +73,7 @@ class JsonRpcHttpTransporter implements TransporterInterface
         });
         $url = $schema . $uri;
 
-        $contextHeaders = Context::get('json-rpc-headers',[]);
+        $contextHeaders = Context::get('json-rpc-headers', []);
 
         $headers = Arr::collapse([
             $contextHeaders,
@@ -82,13 +83,26 @@ class JsonRpcHttpTransporter implements TransporterInterface
             ]
         ]);
 
-        $response = $this->getClient()->post($url, [
+        $options = [
             RequestOptions::HEADERS => $headers,
             RequestOptions::HTTP_ERRORS => false,
             RequestOptions::BODY => $data,
-        ]);
+        ];
+        if (array_key_exists('requestOptions', $contextHeaders)) {
+            $requestOptions = data_get($contextHeaders, ['requestOptions']);//RequestOptions::PROXY
+            if ($requestOptions) {
+                $options = Arr::collapse([
+                    $options,
+                    $requestOptions
+                ]);
+            }
+            unset($headers['requestOptions']);
+            $options[RequestOptions::HEADERS] = $headers;
+        }
+
+        $response = $this->getClient()->post($url, $options);
         if ($response->getStatusCode() === 200) {
-            return (string) $response->getBody();
+            return (string)$response->getBody();
         }
         $this->loadBalancer->removeNode($node);
 
