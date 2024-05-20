@@ -568,11 +568,17 @@ trait BaseDb
      * 创建表
      * @param string|ConnectionInterface $connection 数据库连接
      * @param array $tableData ['要创建的表名'=>'模板表名'] 如:['pt_ali_online_products_last' => 'pt_ali_online_products',]
-     * @param false $isDrop 是否删除原表 true：是；false：否；默认：false
+     * @param bool|null $isDrop 是否删除原表 true：是；false：否；默认：false
+     * @param bool|null $isThrowableDropTable 是否异常删除表 true:是 false:否 默认：false
      * @return bool
      * @throws \Throwable
      */
-    public static function createTable(string|ConnectionInterface $connection = Constant::DB_CONNECTION_DEFAULT, array $tableData = [], $isDrop = false): bool
+    public static function createTable(
+        string|ConnectionInterface $connection = Constant::DB_CONNECTION_DEFAULT,
+        array $tableData = [],
+        ?bool $isDrop = false,
+        ?bool $isThrowableDropTable = false
+    ): bool
     {
         if (empty($tableData)) {
             return false;
@@ -597,11 +603,15 @@ trait BaseDb
                 $dbConnection->statement(strtr($createTableSql, $trans));//, [$fromTable, $toTable]
             } catch (Throwable $throwable) {
 
-                if ($retry < 10) {
-                    //创建失败时删除 后再创建
-                    $dbConnection->statement(strtr($dropTableSql, $trans));
+                if ($retry < 3) {
+
+                    //如果表损坏导致创建表失败，就先删除表后后再创建
+                    if (true === $isThrowableDropTable && false !== stripos($throwable->getMessage(), 'exists')) {
+                        $dbConnection->statement(strtr($dropTableSql, $trans));
+                    }
+
                     $retry = $retry + 1;
-                    Coroutine::sleep(rand(2, 5));
+                    Coroutine::sleep(rand(2, 3));
                     goto beginning;
                 }
 
@@ -758,9 +768,7 @@ trait BaseDb
      */
     public static function getCurrentModel(string|array $connection, string|array $table)
     {
-        $baseConfig = static::handleParameters($connection, $table);
-//        $connection = data_get($baseConfig, Constant::CONNECTION);
-//        $table = data_get($baseConfig, Constant::DB_EXECUTION_PLAN_TABLE);
+        static::handleParameters($connection, $table);
 
         $retry = 0;
         beginning:
