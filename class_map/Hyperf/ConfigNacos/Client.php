@@ -21,6 +21,7 @@ use Hyperf\Nacos\Exception\RequestException;
 use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
+use function Hyperf\Support\call;
 
 
 class Client implements ClientInterface
@@ -50,6 +51,30 @@ class Client implements ClientInterface
         $baseUri = $this->client->getConfig()->getBaseUri();
         $username = $this->client->getConfig()->getUsername();
         $password = $this->client->getConfig()->getPassword();
+        $decryptDefault = $this->config->get('config_center.drivers.nacos.client.decrypt');
+
+//        $baseUri = $this->config->get('config_center.drivers.nacos.client.uri') ?? $this->client->getConfig()->getBaseUri();
+//        $username = $this->config->get('config_center.drivers.nacos.client.username', $this->client->getConfig()->getUsername());
+//        $password = $this->config->get('config_center.drivers.nacos.client.password', $this->client->getConfig()->getPassword());
+//        $decryptDefault = $this->config->get('config_center.drivers.nacos.client.decrypt');
+
+        try {
+            if ($decryptDefault) {
+                if (true === $decryptDefault) {
+                    $baseUri = decrypt($baseUri);
+                    $username = decrypt($username);
+                    $password = decrypt($password);
+                } else {
+                    $baseUri = call($decryptDefault, [$baseUri]);
+                    $username = call($decryptDefault, [$username]);
+                    $password = call($decryptDefault, [$password]);
+                }
+            }
+        } catch (Throwable $throwable) {
+        }
+        $this->client->getConfig()->baseUri = $baseUri;
+        $this->client->getConfig()->username = $username;
+        $this->client->getConfig()->password = $password;
 
         $config = [];
         foreach ($listener as $key => $item) {
@@ -57,6 +82,26 @@ class Client implements ClientInterface
             $address = $item['address'] ?? null;
             $consumerUsername = $item['username'] ?? null;
             $consumerPassword = $item['password'] ?? null;
+            $tenant = $item['tenant'] ?? null;
+            $decrypt = $item['decrypt'] ?? null;
+
+            try {
+                if ($decrypt) {
+                    if (true === $decrypt) {
+                        $address = $address !== null ? decrypt($address) : $address;
+                        $consumerUsername = $consumerUsername !== null ? decrypt($consumerUsername) : $consumerUsername;
+                        $consumerPassword = $consumerPassword !== null ? decrypt($consumerPassword) : $consumerPassword;
+                        $tenant = $tenant !== null ? decrypt($tenant) : $tenant;
+                    } else {
+                        $address = $address !== null ? call($decrypt, [$address]) : $address;
+                        $consumerUsername = $consumerUsername !== null ? call($decrypt, [$consumerUsername]) : $consumerUsername;
+                        $consumerPassword = $consumerPassword !== null ? call($decrypt, [$consumerPassword]) : $consumerPassword;
+                        $tenant = $tenant !== null ? call($decrypt, [$tenant]) : $tenant;
+                    }
+                }
+            } catch (Throwable $throwable) {
+            }
+
             if ($address !== null) {
                 $this->client->getConfig()->baseUri = $address;
             }
@@ -67,10 +112,16 @@ class Client implements ClientInterface
                 $this->client->getConfig()->password = $consumerPassword;
             }
 
+//            var_dump(__METHOD__,
+//                $this->client->getConfig()->getBaseUri(),
+//                $this->client->getConfig()->getUsername(),
+//                $this->client->getConfig()->getPassword(),
+//            );
+
             try {
                 $dataId = $item['data_id'];
                 $group = $item['group'];
-                $tenant = $item['tenant'] ?? null;
+
                 $type = $item['type'] ?? null;
                 $response = $this->client->config->get($dataId, $group, $tenant);
                 if ($response->getStatusCode() !== 200) {

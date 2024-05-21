@@ -16,8 +16,7 @@ class EncryptionServiceProvider
     public function __invoke(ContainerInterface $container)
     {
         $configInterface = $container->get(ConfigInterface::class);
-
-        $config = $configInterface->get('app');
+        $config = $configInterface->get('encrypter');
 
         // If the key starts with "base64:", we will need to decode the key before handing
         // it off to the encrypter. Keys may be base-64 encoded for presentation and we

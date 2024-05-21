@@ -9,6 +9,7 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace Hyperf\ConfigNacos;
 
 use Hyperf\Collection\Arr;
@@ -19,6 +20,7 @@ use Hyperf\Nacos\Protobuf\Response\ConfigQueryResponse;
 use Psr\Container\ContainerInterface;
 
 use Hyperf\ConfigCenter\Mode;
+use function Hyperf\Support\call;
 
 class NacosDriver extends AbstractDriver
 {
@@ -37,18 +39,86 @@ class NacosDriver extends AbstractDriver
 
     public function createMessageFetcherLoop(): void
     {
-        if (! $this->config->get('config_center.drivers.nacos.client.grpc.enable', false)) {
+        if (!$this->config->get('config_center.drivers.nacos.client.grpc.enable', false)) {
             parent::createMessageFetcherLoop();
             return;
         }
 
-        $application = $this->client->getClient();
+        $baseUri = $this->config->get('config_center.drivers.nacos.client.uri', $this->client->getConfig()->getBaseUri());
+        $username = $this->config->get('config_center.drivers.nacos.client.username', $this->client->getConfig()->getUsername());
+        $password = $this->config->get('config_center.drivers.nacos.client.password', $this->client->getConfig()->getPassword());
+        $decryptDefault = $this->config->get('config_center.drivers.nacos.client.decrypt');
+        try {
+            if ($decryptDefault) {
+                if (true === $decryptDefault) {
+                    $baseUri = decrypt($baseUri);
+                    $username = decrypt($username);
+                    $password = decrypt($password);
+                } else {
+                    $baseUri = call($decryptDefault, [$baseUri]);
+                    $username = call($decryptDefault, [$username]);
+                    $password = call($decryptDefault, [$password]);
+                }
+            }
+        } catch (Throwable $throwable) {
+        }
+        $this->client->getConfig()->baseUri = $baseUri;
+        $this->client->getConfig()->username = $username;
+        $this->client->getConfig()->password = $password;
+
+//        $application = $this->client->getClient();
+
+        $_application = [];
         $listeners = $this->config->get('config_center.drivers.nacos.listener_config', []);
         foreach ($listeners as $key => $item) {
             $dataId = $item['data_id'];
             $group = $item['group'];
             $tenant = $item['tenant'] ?? '';
             $type = $item['type'] ?? null;
+
+            /**************兼容配置中心独立配置的情况 start ************************************/
+            $decrypt = $item['decrypt'] ?? null;
+            try {
+                if ($decrypt) {
+                    if (true === $decrypt) {
+                        $address = $address !== null ? decrypt($address) : $address;
+                        $consumerUsername = $consumerUsername !== null ? decrypt($consumerUsername) : $consumerUsername;
+                        $consumerPassword = $consumerPassword !== null ? decrypt($consumerPassword) : $consumerPassword;
+                        $tenant = $tenant !== null ? decrypt($tenant) : $tenant;
+                    } else {
+                        $address = $address !== null ? call($decrypt, [$address]) : $address;
+                        $consumerUsername = $consumerUsername !== null ? call($decrypt, [$consumerUsername]) : $consumerUsername;
+                        $consumerPassword = $consumerPassword !== null ? call($decrypt, [$consumerPassword]) : $consumerPassword;
+                        $tenant = $tenant !== null ? call($decrypt, [$tenant]) : $tenant;
+                    }
+                }
+            } catch (\Throwable $throwable) {
+            }
+            if ($address !== null) {
+                $this->client->getConfig()->baseUri = $address;
+            }
+            if ($consumerUsername !== null) {
+                $this->client->getConfig()->username = $consumerUsername;
+            }
+            if ($consumerPassword !== null) {
+                $this->client->getConfig()->password = $consumerPassword;
+            }
+
+            if (!isset($_application[$this->client->getConfig()->getBaseUri()])) {
+                $_application[$this->client->getConfig()->getBaseUri()] = $this->client->getClient();
+            }
+            $application = $_application[$this->client->getConfig()->getBaseUri()];
+
+            if ($address !== null) {
+                $this->client->getConfig()->baseUri = $address;
+            }
+            if ($consumerUsername !== null) {
+                $this->client->getConfig()->username = $consumerUsername;
+            }
+            if ($consumerPassword !== null) {
+                $this->client->getConfig()->password = $consumerPassword;
+            }
+            /**************兼容配置中心独立配置的情况 end   ************************************/
 
             $client = $application->grpc->get($tenant);
             $client->listenConfig($group, $dataId, new ConfigChangeNotifyRequestHandler(function (ConfigQueryResponse $response) use ($key, $type) {
@@ -71,9 +141,15 @@ class NacosDriver extends AbstractDriver
             }));
         }
 
-        foreach ($application->grpc->getClients() as $client) {
-            $client->listen();
+        foreach ($_application as $application) {
+            foreach ($application->grpc->getClients() as $client) {
+                $client->listen();
+            }
         }
+
+//        foreach ($application->grpc->getClients() as $client) {
+//            $client->listen();
+//        }
     }
 
     protected function updateConfig(array $config): void
