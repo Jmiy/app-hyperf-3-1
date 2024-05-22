@@ -25,6 +25,7 @@ use Psr\Http\Message\ResponseInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
 
+use function Hyperf\Collection\data_get;
 use function Hyperf\Support\call;
 use function Hyperf\Support\retry;
 
@@ -64,6 +65,23 @@ class NacosDriver implements DriverInterface
         $groupName = $this->config->get('services.drivers.nacos.group_name');
         $namespaceId = $this->config->get('services.drivers.nacos.namespace_id');
         $ephemeral = $this->config->get('services.drivers.nacos.ephemeral');
+        $decryptDefault = $this->config->get('services.drivers.nacos.decrypt');
+
+        try {
+            if ($decryptDefault) {
+
+                $baseUri = $baseUri === null ? $baseUri : (true === $decryptDefault ? decrypt($baseUri) : call($decryptDefault, [$baseUri]));
+                $username = $username === null ? $username : (true === $decryptDefault ? decrypt($username) : call($decryptDefault, [$username]));
+                $password = $password === null ? $password : (true === $decryptDefault ? decrypt($password) : call($decryptDefault, [$password]));
+                $groupName = $groupName === null ? $groupName : (true === $decryptDefault ? decrypt($groupName) : call($decryptDefault, [$groupName]));
+                $namespaceId = $namespaceId === null ? $namespaceId : (true === $decryptDefault ? decrypt($namespaceId) : call($decryptDefault, [$namespaceId]));
+
+                $this->client->getConfig()->baseUri = $baseUri;
+                $this->client->getConfig()->username = $username;
+                $this->client->getConfig()->password = $password;
+            }
+        } catch (Throwable $throwable) {
+        }
 
         $address = $this->config->get('services.' . $index . '.' . $name . '.registry.address');
         $consumerUsername = $this->config->get('services.' . $index . '.' . $name . '.registry.username');
@@ -72,22 +90,17 @@ class NacosDriver implements DriverInterface
         $_namespaceId = $this->config->get('services.' . $index . '.' . $name . '.registry.namespace_id');
         $_ephemeral = $this->config->get('services.' . $index . '.' . $name . '.registry.ephemeral');
         $decrypt = $this->config->get('services.' . $index . '.' . $name . '.registry.decrypt');
+        $isRegistry = $this->config->get('services.' . $index . '.' . $name . '.is_registry', true);
+        $extendData = [
+            'isRegistry' => $isRegistry,
+        ];
 
         if ($decrypt) {
-
-            if (true === $decrypt) {
-                $address = decrypt($address);
-                $consumerUsername = decrypt($consumerUsername);
-                $consumerPassword = decrypt($consumerPassword);
-                $_groupName = decrypt($_groupName);
-                $_namespaceId = decrypt($_namespaceId);
-            } else {
-                $address = call($decrypt, [$address]);
-                $consumerUsername = call($decrypt, [$consumerUsername]);
-                $consumerPassword = call($decrypt, [$consumerPassword]);
-                $_groupName = call($decrypt, [$_groupName]);
-                $_namespaceId = call($decrypt, [$_namespaceId]);
-            }
+            $address = $address === null ? $address : (true === $decrypt ? decrypt($address) : call($decrypt, [$address]));
+            $consumerUsername = $consumerUsername === null ? $consumerUsername : (true === $decrypt ? decrypt($consumerUsername) : call($decrypt, [$consumerUsername]));
+            $consumerPassword = $consumerPassword === null ? $consumerPassword : (true === $decrypt ? decrypt($consumerPassword) : call($decrypt, [$consumerPassword]));
+            $_groupName = $_groupName === null ? $_groupName : (true === $decrypt ? decrypt($_groupName) : call($decrypt, [$_groupName]));
+            $_namespaceId = $_namespaceId === null ? $_namespaceId : (true === $decrypt ? decrypt($_namespaceId) : call($decrypt, [$_namespaceId]));
         }
 
         if ($address) {
@@ -106,7 +119,7 @@ class NacosDriver implements DriverInterface
 //        var_dump($address, $consumerUsername, $consumerPassword, $groupName, $namespaceId);
         $ephemeral = (bool)($_ephemeral !== null ? $_ephemeral : $ephemeral);//(bool)$this->config->get('services.drivers.nacos.ephemeral');
         try {
-            return call($callback, [$name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, $lightBeatEnabled]);
+            return call($callback, [$name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, $lightBeatEnabled, $extendData]);
         } catch (Throwable $throwable) {
             throw $throwable;
         } finally {
@@ -129,7 +142,7 @@ class NacosDriver implements DriverInterface
         $host = '';
         $port = 0;
         $lightBeatEnabled = false;
-        $callback = function ($name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, &$lightBeatEnabled) {
+        $callback = function ($name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, &$lightBeatEnabled, $extendData = []) {
             $response = $this->client->instance->list($name, [
                 'groupName' => $groupName,
                 'namespaceId' => $namespaceId,
@@ -233,8 +246,16 @@ class NacosDriver implements DriverInterface
     public function register(string $name, string $host, int $port, array $metadata): void
     {
         $lightBeatEnabled = false;
-        $callback = function ($name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, &$lightBeatEnabled) {
+        $callback = function ($name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, &$lightBeatEnabled, $extendData = []) {
             $this->setMetadata($name, $metadata);
+
+            $isRegistry = data_get($extendData, ['isRegistry'], true);//$name对应是服务是否需要注册 true:需要  false：不需要 默认：true
+            if (false === $isRegistry) {
+                $this->serviceCreated[$name] = true;
+                $this->serviceRegistered[$name] = true;
+                return;
+            }
+
             if (!$ephemeral && !array_key_exists($name, $this->serviceCreated)) {
                 $response = $this->client->service->create($name, [
                     'groupName' => $groupName,
@@ -311,7 +332,14 @@ class NacosDriver implements DriverInterface
         $this->setMetadata($name, $metadata);
 
         $lightBeatEnabled = false;
-        $callback = function ($name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, &$lightBeatEnabled) {
+        $callback = function ($name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, &$lightBeatEnabled, $extendData = []) {
+            $isRegistry = data_get($extendData, ['isRegistry'], true);//$name对应是服务是否需要注册 true:需要  false：不需要 默认：true
+            if (false === $isRegistry) {
+                $this->serviceCreated[$name] = true;
+                $this->serviceRegistered[$name] = true;
+                return true;
+            }
+
             $response = $this->client->service->detail(
                 $name,
                 $groupName,
@@ -455,7 +483,13 @@ class NacosDriver implements DriverInterface
                             break;
                         }
 
-                        $callback = function ($name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, &$lightBeatEnabled) {
+                        $callback = function ($name, $host, $port, $metadata, $ephemeral, $groupName, $namespaceId, &$lightBeatEnabled, $extendData = []) {
+
+                            $isRegistry = data_get($extendData, ['isRegistry'], true);//$name对应是服务是否需要注册 true:需要  false：不需要 默认：true
+                            if (false === $isRegistry) {
+                                return $extendData;
+                            }
+
                             $response = $this->client->instance->beat(
                                 $name,
                                 [
@@ -498,6 +532,13 @@ class NacosDriver implements DriverInterface
                         $rs = $this->baseRegister($name, $host, $port, $metadata, $lightBeatEnabled, $callback);
                         if (false === $rs) {
                             continue;
+                        }
+
+                        if (is_array($rs)) {
+                            $isRegistry = data_get($rs, ['isRegistry'], true);//$name对应是服务是否需要注册 true:需要  false：不需要 默认：true
+                            if (false === $isRegistry) {
+                                break;
+                            }
                         }
                     } catch (Throwable $exception) {
                         $this->logger->error('The nacos heartbeat failed, caused by ' . $exception);

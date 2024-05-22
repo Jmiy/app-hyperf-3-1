@@ -60,15 +60,9 @@ class Client implements ClientInterface
 
         try {
             if ($decryptDefault) {
-                if (true === $decryptDefault) {
-                    $baseUri = decrypt($baseUri);
-                    $username = decrypt($username);
-                    $password = decrypt($password);
-                } else {
-                    $baseUri = call($decryptDefault, [$baseUri]);
-                    $username = call($decryptDefault, [$username]);
-                    $password = call($decryptDefault, [$password]);
-                }
+                $baseUri = $baseUri === null ? $baseUri : (true === $decryptDefault ? decrypt($baseUri) : call($decryptDefault, [$baseUri]));
+                $username = $username === null ? $username : (true === $decryptDefault ? decrypt($username) : call($decryptDefault, [$username]));
+                $password = $password === null ? $password : (true === $decryptDefault ? decrypt($password) : call($decryptDefault, [$password]));
             }
         } catch (Throwable $throwable) {
         }
@@ -87,17 +81,10 @@ class Client implements ClientInterface
 
             try {
                 if ($decrypt) {
-                    if (true === $decrypt) {
-                        $address = $address !== null ? decrypt($address) : $address;
-                        $consumerUsername = $consumerUsername !== null ? decrypt($consumerUsername) : $consumerUsername;
-                        $consumerPassword = $consumerPassword !== null ? decrypt($consumerPassword) : $consumerPassword;
-                        $tenant = $tenant !== null ? decrypt($tenant) : $tenant;
-                    } else {
-                        $address = $address !== null ? call($decrypt, [$address]) : $address;
-                        $consumerUsername = $consumerUsername !== null ? call($decrypt, [$consumerUsername]) : $consumerUsername;
-                        $consumerPassword = $consumerPassword !== null ? call($decrypt, [$consumerPassword]) : $consumerPassword;
-                        $tenant = $tenant !== null ? call($decrypt, [$tenant]) : $tenant;
-                    }
+                    $address = $address === null ? $address : (true === $decrypt ? decrypt($address) : call($decrypt, [$address]));
+                    $consumerUsername = $consumerUsername === null ? $consumerUsername : (true === $decrypt ? decrypt($consumerUsername) : call($decrypt, [$consumerUsername]));
+                    $consumerPassword = $consumerPassword === null ? $consumerPassword : (true === $decrypt ? decrypt($consumerPassword) : call($decrypt, [$consumerPassword]));
+                    $tenant = $tenant === null ? $tenant : (true === $decrypt ? decrypt($tenant) : call($decrypt, [$tenant]));
                 }
             } catch (Throwable $throwable) {
             }
