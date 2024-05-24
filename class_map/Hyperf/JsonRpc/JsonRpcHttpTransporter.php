@@ -73,6 +73,7 @@ class JsonRpcHttpTransporter implements TransporterInterface
         });
         $url = $schema . $uri;
 
+        /****************AOP handle request options start *****************************/
         $contextHeaders = Context::get('json-rpc-headers', []);
 
         $headers = Arr::collapse([
@@ -82,6 +83,10 @@ class JsonRpcHttpTransporter implements TransporterInterface
                 'x-jmiy-app' => config('app_name'),
             ]
         ]);
+
+        if (!array_key_exists('x-jmiy-protocol', $headers)) {
+            $headers['x-jmiy-protocol'] = 'jsonrpc-http';
+        }
 
         $options = [
             RequestOptions::HEADERS => $headers,
@@ -99,12 +104,13 @@ class JsonRpcHttpTransporter implements TransporterInterface
             unset($headers['requestOptions']);
             $options[RequestOptions::HEADERS] = $headers;
         }
+        /****************AOP handle request options end   *****************************/
 
         $response = $this->getClient()->post($url, $options);
         if ($response->getStatusCode() === 200) {
             return (string)$response->getBody();
         }
-        $this->loadBalancer->removeNode($node);
+//        $this->loadBalancer->removeNode($node);//3.0 bug
 
         return '';
     }
