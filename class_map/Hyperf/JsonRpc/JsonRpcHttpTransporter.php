@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Hyperf\JsonRpc;
 
+use Business\Hyperf\Constants\Constant;
 use GuzzleHttp\Client;
 use GuzzleHttp\RequestOptions;
 use Hyperf\Collection\Arr;
@@ -74,18 +75,18 @@ class JsonRpcHttpTransporter implements TransporterInterface
         $url = $schema . $uri;
 
         /****************AOP handle request options start *****************************/
-        $contextHeaders = Context::get('json-rpc-headers', []);
+        $contextHeaders = Context::get(Constant::JSON_RPC_HEADERS_KEY, []);
 
         $headers = Arr::collapse([
             $contextHeaders,
             [
                 'Content-Type' => 'application/json',
-                'x-jmiy-app' => config('app_name'),
+//                Constant::RPC_APP_KEY => config('app_name'),
             ]
         ]);
 
-        if (!array_key_exists('x-jmiy-protocol', $headers)) {
-            $headers['x-jmiy-protocol'] = 'jsonrpc-http';
+        if (!array_key_exists(Constant::RPC_PROTOCOL_KEY, $headers)) {
+            $headers[Constant::RPC_PROTOCOL_KEY] = Constant::JSON_RPC_HTTP_PROTOCOL;
         }
 
         $options = [

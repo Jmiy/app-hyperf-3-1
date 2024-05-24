@@ -2,6 +2,7 @@
 
 namespace GuzzleHttp;
 
+use Business\Hyperf\Constants\Constant;
 use function Business\Hyperf\Utils\Collection\data_get;
 use function Hyperf\Config\config;
 use Hyperf\Coroutine\Coroutine;
@@ -302,11 +303,11 @@ class Client implements ClientInterface, \Psr\Http\Client\ClientInterface
      */
     private function prepareDefaults(array $options): array
     {
-        $contextHeaders = Context::get('json-rpc-headers', []);
+        $contextHeaders = Context::get(Constant::JSON_RPC_HEADERS_KEY, []);
         $results = [
             $contextHeaders,
             [
-                'x-jmiy-app' => config('app_name'),
+                Constant::RPC_APP_KEY => config('app_name'),
             ],
             data_get($options, [RequestOptions::HEADERS], [])
         ];

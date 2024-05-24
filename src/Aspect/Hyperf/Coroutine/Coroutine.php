@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Aspect\Hyperf\Coroutine;
 
+use Business\Hyperf\Constants\Constant;
 use function Hyperf\Support\call;
 use function Hyperf\Support\make;
 use function Business\Hyperf\Utils\Collection\data_get;
@@ -55,7 +56,7 @@ class Coroutine extends AbstractAspect
             try {
                 // 按需复制，禁止复制 Socket，不然会导致 Socket 跨协程调用从而报错。
                 $keys = config('common.context_copy', []);
-                $keys[] = 'json-rpc-headers';
+                $keys[] = Constant::JSON_RPC_HEADERS_KEY;//'json-rpc-headers';
                 Context::copy($id, $keys);
                 call($callable);
             } catch (Throwable $throwable) {

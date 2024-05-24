@@ -779,7 +779,6 @@ class Constant
     public const QUEUE_JUMIA_GET_PAGE_INFO = 'queue_jumia_get_page_info';// jumia  获取分页产品数据
 
 
-
     public const DB_CONNECTION_APP_EBAY = self::DB_CONNECTION_PREFIX_APP . 'ebay';
     public const DB_CONNECTION_APP_JOOM = self::DB_CONNECTION_PREFIX_APP . 'joom';
     public const DB_CONNECTION_APP_SHOPEE = self::DB_CONNECTION_PREFIX_APP . 'shopee';
@@ -798,4 +797,12 @@ class Constant
     public const DB_CONNECTION_APP_CATCH = self::DB_CONNECTION_PREFIX_APP . 'CATCH';
 
     public const DB_COLUMN_FAIL_TOTAL = 'fail_total';
+
+    public const JSON_RPC_HEADERS_KEY = 'json-rpc-headers';
+    public const RPC_PROTOCOL_KEY = 'x-jmiy-protocol';
+    public const RPC_APP_KEY = 'x-jmiy-app';
+    public const RPC_TOKEN_KEY = 'x-jmiy-token';
+    public const RPC_PLATFORM_KEY = 'x-jmiy-platform';
+    public const JSON_RPC_HTTP_PROTOCOL = 'jsonrpc-http';
+
 }
