@@ -18,9 +18,9 @@ use Hyperf\ConfigCenter\Contract\ClientInterface as ConfigClientInterface;
 use Hyperf\Nacos\Protobuf\ListenHandler\ConfigChangeNotifyRequestHandler;
 use Hyperf\Nacos\Protobuf\Response\ConfigQueryResponse;
 use Psr\Container\ContainerInterface;
-
 use Hyperf\ConfigCenter\Mode;
 use function Hyperf\Support\call;
+use Throwable;
 
 class NacosDriver extends AbstractDriver
 {
@@ -60,7 +60,7 @@ class NacosDriver extends AbstractDriver
                     $password = call($decryptDefault, [$password]);
                 }
             }
-        } catch (Throwable $throwable) {
+        } catch (\Throwable $throwable) {
         }
         $this->client->getConfig()->baseUri = $baseUri;
         $this->client->getConfig()->username = $username;
@@ -77,6 +77,9 @@ class NacosDriver extends AbstractDriver
             $type = $item['type'] ?? null;
 
             /**************兼容配置中心独立配置的情况 start ************************************/
+            $address = $item['address'] ?? null;
+            $consumerUsername = $item['username'] ?? null;
+            $consumerPassword = $item['password'] ?? null;
             $decrypt = $item['decrypt'] ?? null;
             try {
                 if ($decrypt) {
@@ -110,13 +113,13 @@ class NacosDriver extends AbstractDriver
             $application = $_application[$this->client->getConfig()->getBaseUri()];
 
             if ($address !== null) {
-                $this->client->getConfig()->baseUri = $address;
+                $this->client->getConfig()->baseUri = $baseUri;
             }
             if ($consumerUsername !== null) {
-                $this->client->getConfig()->username = $consumerUsername;
+                $this->client->getConfig()->username = $username;
             }
             if ($consumerPassword !== null) {
-                $this->client->getConfig()->password = $consumerPassword;
+                $this->client->getConfig()->password = $password;
             }
             /**************兼容配置中心独立配置的情况 end   ************************************/
 

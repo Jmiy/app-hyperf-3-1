@@ -3,21 +3,20 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Middleware\Auth;
 
+use Business\Hyperf\Constants\Constant as BusinessConstant;
+use Business\Hyperf\Exception\BusinessException;
+use Hyperf\HttpMessage\Stream\SwooleStream;
+use Hyperf\HttpServer\Router\Dispatched;
+use Hyperf\JsonRpc\DataFormatter;
+use Hyperf\Rpc\ErrorResponse;
+use function Hyperf\Collection\data_get;
 use function Hyperf\Config\config;
-use function Business\Hyperf\Utils\Collection\data_get;
-use Hyperf\Context\ApplicationContext;
-use Business\Hyperf\Constants\Constant;
-use Business\Hyperf\Service\MenuService;
-use Business\Hyperf\Utils\Response;
-use Hyperf\Cache\CacheManager;
-use Hyperf\Contract\SessionInterface;
-use Hyperf\Redis\RedisFactory;
 use Hyperf\Context\Context;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Server\RequestHandlerInterface;
-use Hyperf\HttpServer\Router\Dispatched;
+use function Hyperf\Coroutine\go;
 
 /**
  * 获取 OAuth 2.0 鉴权后的用户数据，包含
@@ -55,74 +54,137 @@ class AuthMiddleware implements MiddlewareInterface
 
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
-        $userDataKey = [];
-        $userData = [];
-        $authenticatedUserId = $request->getHeaderLine('x-authenticated-userid');
-        if ('' !== $authenticatedUserId) {//如果是通过kong认证，就将 token 的数据设置到用户信息上下文中
+        $routeInfo = $request->getAttribute(Dispatched::class);
+        $auth = data_get($routeInfo, ['handler', 'options', 'auth'], true);
+        $serverName = data_get($routeInfo, ['serverName'], 'http');
+        $protocol = $request->getHeaderLine(BusinessConstant::RPC_PROTOCOL_KEY);
+        $service = $request->getHeaderLine('x-jmiy-service') ?: config('app_name');
 
-            if (1 !== preg_match('/^\d+:\d+:[01]:\d{3}:\d{3}$/', $authenticatedUserId)) {
-                //return Context::get(ResponseInterface::class)->withStatus(401, 'Unauthorized');
-                return Response::json(['jump_url' => config('app.login')], 401);
-            }
+        $responseStatusCode = 401;
+        $authRs = true;//认证结果 true：通过  false：不通过 默认：true
+        $responseReasonPhrase = 'Unauthorized-serverName:' . $serverName;
 
-            $userData = explode(':', $authenticatedUserId);
-            $userDataKey = [
-                Constant::DB_COLUMN_ADMIN_ID => 0,//账号id
-                Constant::DB_COLUMN_USER_ID => 1,//主账号id
-                Constant::DB_COLUMN_IS_MASTER => 2,//是否主账号
-                Constant::DB_COLUMN_DBHOST => 3,//数据库
-                Constant::DB_COLUMN_CODENO => 4,//编号
-            ];
-        } else {
-            $cookieParams = $request->getCookieParams();
-            $sessionId = data_get($cookieParams, config('session.options.session_name', 'PHPSESSID'));
-            if ($sessionId !== null) {//如果使用 session，就将 session 的数据设置到用户信息上下文中
-                //$userData = ApplicationContext::getContainer()->get(SessionInterface::class)->all();
-//                $session = ApplicationContext::getContainer()->get(RedisFactory::class)->get('session');
-//                $userData = $session->get(config("session.options.prefix") . $sessionId);
-//                $userData = $userData ? unserialize($userData) : [];
-                $userData = ApplicationContext::getContainer()->get(CacheManager::class)->getDriver('session')->get($sessionId);
-                $sessionPrefix = config("session.options.key_prefix");
-                if (data_get($userData, $sessionPrefix . Constant::DB_COLUMN_ADMIN_ID) !== null) {//如果是用户控制面板
-                    $userDataKey = [
-                        Constant::DB_COLUMN_ADMIN_ID => $sessionPrefix . Constant::DB_COLUMN_ADMIN_ID,//账号id
-                        Constant::DB_COLUMN_USER_ID => $sessionPrefix . Constant::DB_COLUMN_USER_ID,//主账号id
-                        Constant::DB_COLUMN_IS_MASTER => $sessionPrefix . Constant::DB_COLUMN_IS_MASTER,//是否主账号
-                        Constant::DB_COLUMN_DBHOST => $sessionPrefix . Constant::DB_COLUMN_DBHOST,//数据库
-                        Constant::DB_COLUMN_CODENO => $sessionPrefix . Constant::DB_COLUMN_CODENO,//编号
-                    ];
-                } else {//如果是总台登录  data_get($userData, 'ship_sys_admin_id') !== null
-                    $sessionPrefix = 'ship_';
-                    $userDataKey = [
-                        'username' => $sessionPrefix . 'username',//账号
-                        Constant::DB_COLUMN_ADMIN_ID => $sessionPrefix . 'sys_admin_id',//账号id
-                        Constant::DB_COLUMN_USER_ID => $sessionPrefix . 'sys_user_id',//主账号id
-                        'role_id' => $sessionPrefix . 'sys_role_id',//角色id
-                        'is_service' => $sessionPrefix . 'is_service',//是否服务
-                        'jdxhash' => $sessionPrefix . 'jdxhash',//jdxhash
-                        'email' => $sessionPrefix . 'email',//邮箱
-                        'realname' => $sessionPrefix . 'realname',//账号名称
-                    ];
-                }
-            }
+        /****************进行ip校验 start ***************/
+        $ips = config('authorization.' . $service . '.ip') ?: 'all';
+        $_ips = explode(',', $ips);
+        $clientIp = getClientIP();
+        if ($ips != 'all' && !in_array($clientIp, $_ips)) {
+            $responseReasonPhrase .= '-' . $clientIp;
+            $authRs = false;
+        }
+        /****************进行ip校验 end   ***************/
+
+        /****************进行签名校验 start ***************/
+        //根据通讯协议获取对应的 token key
+        $tokenKey = 'x-authenticated-open-ai';//api
+        if ($protocol == BusinessConstant::JSON_RPC_HTTP_PROTOCOL) {//微服务
+            $tokenKey = BusinessConstant::RPC_TOKEN_KEY;
         }
 
-        //将账号数据 设置到 请求上下文
-        if ($userData) {
-            $userInfo = [];
-            foreach ($userDataKey as $key => $value) {
-                Context::set(Constant::CONTEXT_USRE_INFO . Constant::LINKER . $key, data_get($userData, $value));
-                $userInfo[$key] = data_get($userData, $value);
-            }
-            $request = $request->withAttribute('userInfo', $userInfo);
-            Context::set(ServerRequestInterface::class, $request);
+        //优先从请求头获取认证的token
+        $token = $request->getHeaderLine('x-authenticated-open-ai');//认证token
+        if (empty($token)) {
+            $token = $request->getHeaderLine(BusinessConstant::RPC_TOKEN_KEY);//认证token
+        }
+        if (empty($token)) {
+            $requestData = $request->getParsedBody();
+            $token = data_get($requestData, [BusinessConstant::RPC_TOKEN_KEY]);//认证token
         }
 
-        //判断是否认证
-        $userId = Context::get(Constant::CONTEXT_USRE_INFO . Constant::LINKER . Constant::DB_COLUMN_ADMIN_ID);
-        if (empty($userId)) {
-            return Response::json(['jump_url' => config('app.login')], 401);
+        //进行签名校验
+        $authorization = config('authorization.' . $service . '.' . $tokenKey);
+        if ($auth !== false && $token != $authorization) {
+            $authRs = false;
         }
+        /****************进行签名校验 end ***************/
+
+//        var_dump(__METHOD__, $request->getHeaders(), $tokenKey, $authorization, $token, $clientIp);
+
+        //如果认证不通过，就返回认证不通过，并且通过钉钉通知
+        if (false === $authRs) {
+
+            $error = new BusinessException(
+                $responseStatusCode,
+                $responseReasonPhrase . ('-' . $request->getHeaderLine('host'))
+            );
+
+            go(function () use ($error) {
+                throw $error;
+            });
+
+            if ($protocol == BusinessConstant::JSON_RPC_HTTP_PROTOCOL) {
+                $response = getApplicationContainer()->get(DataFormatter::class)->formatErrorResponse(
+                    new ErrorResponse($request->getAttribute('request_id'), $responseStatusCode, $responseReasonPhrase, $error)
+                );
+                $body = new SwooleStream(json_encode($response, JSON_UNESCAPED_UNICODE));
+                return Context::get(ResponseInterface::class)->addHeader('content-type', 'application/json')->setBody($body);
+            }
+
+            return Context::get(ResponseInterface::class)->withStatus($responseStatusCode, $responseReasonPhrase);
+        }
+
+//        if ('' !== $authenticatedOpenAi) {//如果是通过kong认证，就将 token 的数据设置到用户信息上下文中
+//
+//            if (1 !== preg_match('/^\d+:\d+:[01]:\d{3}:\d{3}$/', $authenticatedOpenAi)) {
+//                //return Context::get(ResponseInterface::class)->withStatus(401, 'Unauthorized');
+//                return Response::json(['jump_url' => config('app.login')], 401);
+//            }
+//
+//            $userData = explode(':', $authenticatedOpenAi);
+//            $userDataKey = [
+//                Constant::DB_COLUMN_ADMIN_ID => 0,//账号id
+//                Constant::DB_COLUMN_USER_ID => 1,//主账号id
+//                Constant::DB_COLUMN_IS_MASTER => 2,//是否主账号
+//                Constant::DB_COLUMN_DBHOST => 3,//数据库
+//                Constant::DB_COLUMN_CODENO => 4,//编号
+//            ];
+//        } else {
+//            $cookieParams = $request->getCookieParams();
+//            $sessionId = data_get($cookieParams, config('session.options.session_name', 'PHPSESSID'));
+//            if ($sessionId !== null) {//如果使用 session，就将 session 的数据设置到用户信息上下文中
+//
+//                $userData = ApplicationContext::getContainer()->get(CacheManager::class)->getDriver('session')->get($sessionId);
+//                $sessionPrefix = config("session.options.key_prefix");
+//                if (data_get($userData, $sessionPrefix . Constant::DB_COLUMN_ADMIN_ID) !== null) {//如果是用户控制面板
+//                    $userDataKey = [
+//                        Constant::DB_COLUMN_ADMIN_ID => $sessionPrefix . Constant::DB_COLUMN_ADMIN_ID,//账号id
+//                        Constant::DB_COLUMN_USER_ID => $sessionPrefix . Constant::DB_COLUMN_USER_ID,//主账号id
+//                        Constant::DB_COLUMN_IS_MASTER => $sessionPrefix . Constant::DB_COLUMN_IS_MASTER,//是否主账号
+//                        Constant::DB_COLUMN_DBHOST => $sessionPrefix . Constant::DB_COLUMN_DBHOST,//数据库
+//                        Constant::DB_COLUMN_CODENO => $sessionPrefix . Constant::DB_COLUMN_CODENO,//编号
+//                    ];
+//                } else {//如果是总台登录  data_get($userData, 'ship_sys_admin_id') !== null
+//                    $sessionPrefix = 'ship_';
+//                    $userDataKey = [
+//                        'username' => $sessionPrefix . 'username',//账号
+//                        Constant::DB_COLUMN_ADMIN_ID => $sessionPrefix . 'sys_admin_id',//账号id
+//                        Constant::DB_COLUMN_USER_ID => $sessionPrefix . 'sys_user_id',//主账号id
+//                        'role_id' => $sessionPrefix . 'sys_role_id',//角色id
+//                        'is_service' => $sessionPrefix . 'is_service',//是否服务
+//                        'jdxhash' => $sessionPrefix . 'jdxhash',//jdxhash
+//                        'email' => $sessionPrefix . 'email',//邮箱
+//                        'realname' => $sessionPrefix . 'realname',//账号名称
+//                    ];
+//                }
+//            }
+//        }
+//
+//        //将账号数据 设置到 请求上下文
+//        if ($userData) {
+//            $userInfo = [];
+//            foreach ($userDataKey as $key => $value) {
+//                Context::set(Constant::CONTEXT_USRE_INFO . Constant::LINKER . $key, data_get($userData, $value));
+//                $userInfo[$key] = data_get($userData, $value);
+//            }
+//            $request = $request->withAttribute('userInfo', $userInfo);
+//            Context::set(ServerRequestInterface::class, $request);
+//        }
+//
+//        //判断是否认证
+//        $userId = Context::get(Constant::CONTEXT_USRE_INFO . Constant::LINKER . Constant::DB_COLUMN_ADMIN_ID);
+//        if (empty($userId)) {
+//            return Response::json(['jump_url' => config('app.login')], 401);
+//        }
 
         //判断是否有权限
         /**
