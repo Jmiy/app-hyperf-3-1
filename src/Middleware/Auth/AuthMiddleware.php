@@ -58,18 +58,19 @@ class AuthMiddleware implements MiddlewareInterface
         $auth = data_get($routeInfo, ['handler', 'options', 'auth'], true);
         $serverName = data_get($routeInfo, ['serverName'], 'http');
         $protocol = $request->getHeaderLine(BusinessConstant::RPC_PROTOCOL_KEY);
-        $service = $request->getHeaderLine('x-jmiy-service') ?: config('app_name');
+        $appName = config('app_name');
+        $service = $request->getHeaderLine('x-jmiy-service') ?: $appName;
 
         $responseStatusCode = 401;
         $authRs = true;//认证结果 true：通过  false：不通过 默认：true
-        $responseReasonPhrase = 'Unauthorized-serverName:' . $serverName;
+        $responseReasonPhrase = PHP_EOL . $appName . '-Unauthorized-serverName:' . $serverName;
 
         /****************进行ip校验 start ***************/
         $ips = config('authorization.' . $service . '.ip') ?: 'all';
         $_ips = explode(',', $ips);
         $clientIp = getClientIP();
         if ($ips != 'all' && !in_array($clientIp, $_ips)) {
-            $responseReasonPhrase .= '-' . $clientIp;
+            $responseReasonPhrase .= '-clientIp:' . $clientIp;
             $authRs = false;
         }
         /****************进行ip校验 end   ***************/
