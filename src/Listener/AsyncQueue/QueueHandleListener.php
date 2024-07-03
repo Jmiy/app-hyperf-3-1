@@ -76,11 +76,14 @@ class QueueHandleListener implements ListenerInterface
 //                    $this->logger->info(sprintf('[%s] Processing %s.', $date, $jobClass));
                     $this->logger->info(sprintf('Processing %s.', $jobClass));
                     break;
+
                 case $event instanceof AfterHandle:
 //                    $this->logger->info(sprintf('[%s] Processed %s.', $date, $jobClass));
                     $this->logger->info(sprintf('Processed %s.', $jobClass));
                     break;
+
                 case $event instanceof FailedHandle:
+
 //                    $this->logger->error(sprintf('[%s] Failed %s.', $date, $jobClass));
 //                    $this->logger->error($this->formatter->format($event->getThrowable()));
                     $this->logger->error(sprintf('Failed %s.', $jobClass));
@@ -92,10 +95,13 @@ class QueueHandleListener implements ListenerInterface
 
                     }
                     break;
+
                 case $event instanceof RetryHandle:
+
 //                    $this->logger->warning(sprintf('[%s] Retried %s.', $date, $jobClass));
                     $this->logger->warning(sprintf('Retried %s.', $jobClass));
                     $this->logger->error($this->formatter->format($event->getThrowable()));
+
                     try {
                         make(AppExceptionHandler::class)->log($event->getThrowable());
                     } catch (Throwable $e1) {
