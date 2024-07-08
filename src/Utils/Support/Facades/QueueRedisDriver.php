@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Support\Facades;
 
+use function Hyperf\Config\config;
 use function Hyperf\Support\make;
 use function Hyperf\Support\call;
 use function Business\Hyperf\Utils\Collection\data_get;
@@ -15,10 +16,13 @@ class QueueRedisDriver
 
     public static function getKey(string|array $connection, string|array $table, array $lockKeys = [])
     {
+        $connection = is_array($connection) ? $connection : [$connection];
+        array_unshift($connection, config('app_env'));
+        array_unshift($connection, config('app_name'));
         return strtolower(implode(':', array_filter(
                     Arr::collapse(
                         [
-                            is_array($connection) ? $connection : [$connection],
+                            $connection,
                             is_array($table) ? $table : [$table],
                             $lockKeys
                         ]
