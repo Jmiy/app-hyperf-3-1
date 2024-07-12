@@ -9,6 +9,10 @@ use Business\Hyperf\Job\PublicJob;
 use Hyperf\AsyncQueue\Driver\DriverFactory;
 use Hyperf\AsyncQueue\Driver\DriverInterface;
 use Hyperf\AsyncQueue\Annotation\AsyncQueueMessage;
+use Business\Hyperf\Utils\Support\Facades\QueueRedisDriver;
+use Exception;
+use Throwable;
+use function Hyperf\Config\config;
 
 class QueueService
 {
@@ -68,7 +72,7 @@ class QueueService
      */
     public static function push($params, string $queue = 'default', int $delay = 0): bool
     {
-        var_dump(__METHOD__,func_get_args());
+        var_dump(__METHOD__, func_get_args());
         // 这里的 `PublicJob` 会被序列化存到 Redis 中，所以内部变量最好只传入普通数据
         // 同理，如果内部使用了注解 @Value 会把对应对象一起序列化，导致消息体变大。
         // 所以这里也不推荐使用 `make` 方法来创建 `Job` 对象。
@@ -89,6 +93,37 @@ class QueueService
     {
         foreach ($data as $item) {
             pushQueue($item);//进入消息队列
+        }
+
+        return true;
+    }
+
+    /**
+     * 检测redis消费队列待处理通道是否为空
+     * @param $queueConnection
+     * @return bool
+     * @throws \Exception
+     */
+    public static function checkIsEmpty($queueConnection)
+    {
+        try {
+            $redisPoolName = config('async_queue.' . $queueConnection . '.redis.pool');
+            $channel = config('async_queue.' . $queueConnection . '.channel');
+
+            //检测redis里是否有待消费队列,如果队列不为空，不做处理
+            $readModelInfo = QueueRedisDriver::info($redisPoolName, $channel);
+            if (data_get($readModelInfo, 'waiting') != 0
+                || data_get($readModelInfo, 'delayed') != 0
+                || data_get($readModelInfo, 'timeout') != 0
+                || data_get($readModelInfo, 'reserved') != 0
+            ) {
+                return false;
+            }
+        } catch (Throwable $e) {
+            go(function () use ($e, $queueConnection) {
+                throw new Exception('判断队列信息错误：queue:' . $queueConnection . ',msg:' . $e->getMessage());
+            });
+            return false;
         }
 
         return true;
