@@ -14,6 +14,7 @@ use Business\Hyperf\Utils\Support\Facades\QueueRedisDriver;
 use Exception;
 use Throwable;
 use function Hyperf\Config\config;
+use function Business\Hyperf\Utils\Collection\data_get;
 
 class QueueService
 {
