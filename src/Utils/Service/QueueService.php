@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Utils\Service;
 
+use function Hyperf\Coroutine\go;
 use Hyperf\Context\ApplicationContext;
 use Business\Hyperf\Job\PublicJob;
 use Hyperf\AsyncQueue\Driver\DriverFactory;
