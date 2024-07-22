@@ -16,22 +16,20 @@ use function Hyperf\Collection\data_set;
 use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Collection\Arr;
 use Hyperf\Cache\Exception\InvalidArgumentException;
+use Hyperf\Redis\Redis;
 use Psr\Container\ContainerInterface;
 use Hyperf\Redis\RedisFactory;
 
 class RedisDriver extends Driver implements KeyCollectorInterface
 {
-    /**
-     * @var \Redis
-     */
-    protected $redis;
+    protected Redis $redis;
 
     public function __construct(ContainerInterface $container, array $config)
     {
         parent::__construct($container, $config);
 
-        $this->poolName = data_get($config, 'connection', 'default');
-        $this->redis = $container->get(RedisFactory::class)->get($this->poolName);
+//        $this->poolName = data_get($config, 'connection', 'default');
+        $this->redis = $container->get(RedisFactory::class)->get(data_get($config, 'connection', 'default'));
 
 //        $this->redis = $container->get(\Redis::class);
     }
@@ -69,7 +67,7 @@ class RedisDriver extends Driver implements KeyCollectorInterface
 
     public function delete($key): bool
     {
-        return (bool)$this->redis->del($this->getCacheKey($key));
+        return (bool) $this->redis->del($this->getCacheKey($key));
     }
 
     public function clear(): bool
@@ -94,7 +92,7 @@ class RedisDriver extends Driver implements KeyCollectorInterface
 
     public function setMultiple($values, $ttl = null): bool
     {
-        if (!is_array($values)) {
+        if (! is_array($values)) {
             throw new InvalidArgumentException('The values is invalid!');
         }
 
@@ -121,12 +119,12 @@ class RedisDriver extends Driver implements KeyCollectorInterface
             return $this->getCacheKey($key);
         }, $keys);
 
-        return (bool)$this->redis->del(...$cacheKeys);
+        return (bool) $this->redis->del(...$cacheKeys);
     }
 
     public function has($key): bool
     {
-        return (bool)$this->redis->exists($this->getCacheKey($key));
+        return (bool) $this->redis->exists($this->getCacheKey($key));
     }
 
     public function clearPrefix(string $prefix): bool
@@ -135,7 +133,7 @@ class RedisDriver extends Driver implements KeyCollectorInterface
         $key = $prefix . '*';
         while (true) {
             $keys = $this->redis->scan($iterator, $this->getCacheKey($key), 10000);
-            if (!empty($keys)) {
+            if (! empty($keys)) {
                 $this->redis->del(...$keys);
             }
 
@@ -149,7 +147,7 @@ class RedisDriver extends Driver implements KeyCollectorInterface
 
     public function addKey(string $collector, string $key): bool
     {
-        return (bool)$this->redis->sAdd($this->getCacheKey($collector), $key);
+        return (bool) $this->redis->sAdd($this->getCacheKey($collector), $key);
     }
 
     public function keys(string $collector): array
@@ -159,7 +157,12 @@ class RedisDriver extends Driver implements KeyCollectorInterface
 
     public function delKey(string $collector, string ...$key): bool
     {
-        return (bool)$this->redis->sRem($this->getCacheKey($collector), ...$key);
+        return (bool) $this->redis->sRem($this->getCacheKey($collector), ...$key);
+    }
+
+    public function getConnection(): mixed
+    {
+        return $this->redis;
     }
 
     public function __call($name, $arguments)
