@@ -65,20 +65,33 @@ trait BaseFile
      * @throws \Throwable
      */
     public static function downFile(
-        string $url,
-        string $reportDocumentId,
+        string  $url,
+        string  $reportDocumentId,
         ?string $path = '',
         ?string $compressionAlgorithm = 'GZIP',
-        ?bool $latest = true,
-        ?int $tryFileSizeMaxNum = 3,
-        ?int $tryDownFileMaxNum = 3,
+        ?bool   $latest = true,
+        ?int    $tryFileSizeMaxNum = 3,
+        ?int    $tryDownFileMaxNum = 3,
+        ?int    $srcFileSize = null
     )
     {
         $path = config('common.storage') . '/' . date('Ymd') . $path;
         $compressionAlgorithm = strtoupper($compressionAlgorithm);
         $arr = parse_url($url);
         $srcFileName = $path . '/' . $reportDocumentId . '-' . basename($arr['path']);//源文件
-        $distFileName = $path . '/' . $reportDocumentId . '.txt';//目标文件
+//        $distFileName = $path . '/' . $reportDocumentId . '.txt';//目标文件
+        $distFileName = substr($srcFileName, 0, strlen($srcFileName) - 3);//目标文件
+
+        $responseData = [];
+        $fileSize = null;//源文件大小
+        $responseStatusCode = null;
+        if (file_exists($srcFileName)) {
+            $_srcFileSize = filesize($srcFileName);
+            if ($srcFileSize !== null && $_srcFileSize >= $srcFileSize) {//如果源文件已经下载成功，就跳过下载
+                goto beginningCompressionAlgorithm;
+            }
+        }
+
         if (!$latest && is_file($distFileName)) {
             return [
                 Constant::CODE => Constant::CODE_SUCCESS,
@@ -105,11 +118,8 @@ trait BaseFile
         /***************创建存放文件的文件夹 end ****************************/
 
         /*****************获取文件大小 start *************************/
-        $fileSize = null;
         $tryFileSizeNum = 0;
-
         beginningFileSize:
-
         $responseStatusCode = null;
         try {
             $options = [];
@@ -190,7 +200,7 @@ trait BaseFile
         }
         /***************下载文件 end ****************************/
 
-        $srcfileSize = filesize($srcFileName);
+        $srcfileSize = file_exists($srcFileName) ? filesize($srcFileName) : 0;
         if ($fileSize !== null && $srcfileSize < $fileSize - 1024) {//如果文件误差不在1KB范围内，就尝试下载 $tryDownFileMaxNum 次
             if ($tryNum < $tryDownFileMaxNum) {
 
@@ -200,6 +210,9 @@ trait BaseFile
                 goto beginning;
             }
         }
+
+
+        beginningCompressionAlgorithm:
 
         //解压文件
         if ($compressionAlgorithm) {
@@ -211,11 +224,17 @@ trait BaseFile
 
             switch ($compressionAlgorithm) {
                 case 'GZIP':
-                    $stream = gzopen($srcFileName, "r");
-                    while (!gzeof($stream)) { //逐行读取
-                        file_put_contents($distFileName, gzread($stream, 10000), FILE_APPEND);
+//                    $stream = gzopen($srcFileName, "r");
+//                    while (!gzeof($stream)) { //逐行读取
+//                        file_put_contents($distFileName, gzread($stream, 10000), FILE_APPEND);
+//                    }
+//                    gzclose($stream);
+
+                    //解压文件
+                    exec("gzip -dc '{$srcFileName}' > '{$distFileName}'", $output, $return_code);
+                    if ($return_code) {
+                        throw new BusinessException(100003, 'report_document_uncompress_failure');
                     }
-                    gzclose($stream);
 
                     break;
 
@@ -238,8 +257,6 @@ trait BaseFile
                     break;
             }
 
-            $srcfileSize = $fileSize = filesize($distFileName);
-
             //删除源文件
 //            if (is_file($srcFileName)) {
 //                unlink($srcFileName);
@@ -248,12 +265,16 @@ trait BaseFile
             $distFileName = $srcFileName;
         }
 
+        $fileSize = file_exists($srcFileName) ? filesize($srcFileName) : 0;
+        $distFileSize = file_exists($distFileName) ? filesize($distFileName) : 0;
+
         return Arr::collapse([
             [
                 Constant::CODE => $responseStatusCode,
                 Constant::URL => $distFileName,
-                'fileSize' => $fileSize,
-                'distfileSize' => $srcfileSize,
+                'distfileSize' => $distFileSize,//目标文件大小
+                'srcFileName' => $srcFileName,//源文件地址
+                'fileSize' => $fileSize,//源文件大小
             ], $responseData
         ]);
     }
