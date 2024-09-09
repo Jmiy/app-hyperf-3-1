@@ -72,15 +72,17 @@ trait BaseFile
         ?bool   $latest = true,
         ?int    $tryFileSizeMaxNum = 3,
         ?int    $tryDownFileMaxNum = 3,
-        ?int    $srcFileSize = null
+        ?string $srcFileName = null,
+        ?int    $srcFileSize = null,
+        ?string $distFileName = null,
+        ?int    $distFileSize = null,
     )
     {
         $path = config('common.storage') . '/' . date('Ymd') . $path;
         $compressionAlgorithm = strtoupper($compressionAlgorithm);
         $arr = parse_url($url);
-        $srcFileName = $path . '/' . $reportDocumentId . '-' . basename($arr['path']);//源文件
-//        $distFileName = $path . '/' . $reportDocumentId . '.txt';//目标文件
-        $distFileName = substr($srcFileName, 0, strlen($srcFileName) - 3);//目标文件
+        $srcFileName = !empty($srcFileName) ? $srcFileName : ($path . '/' . $reportDocumentId . '-' . basename($arr['path']));//源文件
+        $distFileName = !empty($distFileName) ? $distFileName : substr($srcFileName, 0, strlen($srcFileName) - 3);//目标文件
 
         $responseData = [];
         $fileSize = null;//源文件大小
@@ -211,7 +213,6 @@ trait BaseFile
             }
         }
 
-
         beginningCompressionAlgorithm:
 
         //解压文件
@@ -222,6 +223,8 @@ trait BaseFile
                 unlink($distFileName);
             }
 
+            $output = '';
+            $return_code = '';
             switch ($compressionAlgorithm) {
                 case 'GZIP':
 //                    $stream = gzopen($srcFileName, "r");
@@ -233,7 +236,10 @@ trait BaseFile
                     //解压文件
                     exec("gzip -dc '{$srcFileName}' > '{$distFileName}'", $output, $return_code);
                     if ($return_code) {
-                        throw new BusinessException(100003, 'report_document_uncompress_failure');
+                        throw new BusinessException(
+                            100003,
+                            'uncompress_failure-->output--->' . static::pack($output) . '---->return_code-->' . static::pack($return_code)
+                        );
                     }
 
                     break;
