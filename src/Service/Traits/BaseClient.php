@@ -21,6 +21,7 @@ use Business\Hyperf\Utils\Arrays\MyArr;
 use Business\Hyperf\Utils\Support\Facades\HttpClient;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\RequestOptions;
+use function Business\Hyperf\Utils\Collection\data_get;
 
 trait BaseClient
 {
