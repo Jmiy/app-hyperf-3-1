@@ -39,13 +39,13 @@ trait BaseClient
      */
     public static function httpRequest
     (
-        string $url,
-        ?array $options = [],
+        string  $url,
+        ?array  $options = [],
         ?string $method = 'POST',
-        ?array $headers = [],
-        ?array $config = [],
-        ?array $poolHandlerOption = [],
-        ?array $handlerStackMiddlewares = []
+        ?array  $headers = [],
+        ?array  $config = [],
+        ?array  $poolHandlerOption = [],
+        ?array  $handlerStackMiddlewares = []
     ): array|null
     {
 
@@ -208,6 +208,34 @@ trait BaseClient
         }
 
         return $responseData;
+    }
+
+    public static function isHttpRequestSuccess($responseData): bool
+    {
+        $statusCode = data_get($responseData, Constant::RESPONSE_STATUS_CODE, Constant::NOT_EXIST);
+        if ($statusCode === Constant::NOT_EXIST) {
+            return false;
+        }
+
+        if ($statusCode >= 200 && $statusCode < 300) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * 获取响应数据
+     * @param $responseData
+     * @return array
+     */
+    public static function getHttpResponse($responseData): array
+    {
+        if (!static::isHttpRequestSuccess($responseData)) {
+            return $responseData;
+        }
+
+        return json_decode(data_get($responseData, [Constant::RESPONSE_BODY], '[]'), true);
     }
 
 }
