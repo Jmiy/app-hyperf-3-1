@@ -37,83 +37,102 @@ class QueueRedisDriver
         return make(ChannelConfig::class, ['channel' => $channel]);
     }
 
+    public static function getQueueType(string $channel, mixed $queueConnection = null)
+    {
+        return config('async_queue.' . $queueConnection . '.business.' . $channel);
+    }
 
-    public static function push(?string $poolName = 'default', ?string $channel = '', $data = null, int $delay = 0): bool
+
+    public static function push(string $poolName = 'default', string $channel = '', $data = null, int $delay = 0, mixed $queueConnection = null): bool
     {
         $channel = static::getChannelConfig($channel);
         $redis = Redis::getRedis($poolName);
 
         if ($delay === 0) {
-            return (bool)$redis->lPush($channel->getWaiting(), $data);
+
+            if (static::getQueueType('waiting', $queueConnection) === 'zset') {
+                return $redis->zAdd($channel->getWaiting(), time(), $data) > 0;
+            } else {
+                return (bool)$redis->lPush($channel->getWaiting(), $data);
+            }
         }
 
         return $redis->zAdd($channel->getDelayed(), time() + $delay, $data) > 0;
     }
 
-    public static function pop(?string $poolName = 'default', ?string $channel = '', $limit = 50, $handleTimeout = 10): mixed
+    public static function pop(?string $poolName = 'default', ?string $channel = '', $limit = 50, $handleTimeout = 10, mixed $queueConnection = null): mixed
     {
         $channel = static::getChannelConfig($channel);
         $redis = Redis::getRedis($poolName);
 
         //将延迟队列中到期的消息压入正在执行队列
-        static::move($poolName, $channel->getDelayed(), $channel->getWaiting());
+        static::move($poolName, $channel->getDelayed(), $channel->getWaiting(), $queueConnection);
 
         //将执行超时的消息压入超时队列
-        static::move($poolName, $channel->getReserved(), $channel->getTimeout());
+        static::move($poolName, $channel->getReserved(), $channel->getTimeout(), $queueConnection);
 
         //弹出待执行的消息
+
         $data = [];
-        for ($i = 0; $i < $limit; $i++) {
-
-            $res = $redis->brPop($channel->getWaiting(), 2);
-            if (!isset($res[1])) {//如果待执行队列没有数据了，就跳出整个循环
-                break;
+        if (static::getQueueType('waiting', $queueConnection) === 'zset') {
+            $data = static::move($poolName, $channel->getWaiting(), '', $queueConnection);
+            foreach ($data as $item) {
+                //将待执行的消息压入正在执行队列
+                $redis->zadd($channel->getReserved(), time() + $handleTimeout, $item);
             }
+        } else {
+            for ($i = 0; $i < $limit; $i++) {
 
-            $item = $res[1];
-            $data[] = $item;
+                $res = $redis->brPop($channel->getWaiting(), 2);
+                if (!isset($res[1])) {//如果待执行队列没有数据了，就跳出整个循环
+                    break;
+                }
 
-            //将待执行的消息压入正在执行队列
-            $redis->zadd($channel->getReserved(), time() + $handleTimeout, $item);
+                $item = $res[1];
+                $data[] = $item;
+
+                //将待执行的消息压入正在执行队列
+                $redis->zadd($channel->getReserved(), time() + $handleTimeout, $item);
+            }
         }
 
         return $data;
     }
 
-    public static function consume(?string $poolName = 'default', ?string $channel = '', int $limit = 50, $handleTimeout = 10, $callBack = null): mixed
+    public static function consume(?string $poolName = 'default', ?string $channel = '', int $limit = 50, $handleTimeout = 10, $callBack = null, mixed $queueConnection = null): mixed
     {
-        $data = static::pop($poolName, $channel, $limit, $handleTimeout);
+        $data = static::pop($poolName, $channel, $limit, $handleTimeout, $queueConnection);
 
         if (!empty($data)) {
-            $callback = static::getCallback($poolName, $channel, $data, $callBack);
+            $callback = static::getCallback($poolName, $channel, $data, $callBack, $queueConnection);
 
             $concurrent = new Concurrent(10);
             $concurrent->create($callback);
         }
 
         //将超时队列消息重新入到待执行队列
-        static::reload($poolName, $channel, 'timeout');
+        static::reload($poolName, $channel, 'timeout', $queueConnection);
 
         return $data;
     }
 
-    public static function checkQueueLength(): void
+    public static function checkQueueLength(?string $poolName = 'default', ?string $channel = '', mixed $queueConnection = null): void
     {
-        $info = static::info();
+        $info = static::info($poolName, $channel, $queueConnection);
     }
 
-    public static function getCallback(?string $poolName = 'default', ?string $channel = '', $data = [], $callBack = null): callable
+    public static function getCallback(?string $poolName = 'default', ?string $channel = '', $data = [], $callBack = null, mixed $queueConnection = null): callable
     {
-        return function () use ($poolName, $channel, $data, $callBack) {
+        return function () use ($poolName, $channel, $data, $callBack, $queueConnection) {
 
             $handleCallBack = [
                 'ack' => getJobData(static::class, 'ack', [
-                        $poolName, $channel, $data
+                        $poolName, $channel, $data, $queueConnection
                     ]
                 ),
 
                 'fail' => getJobData(static::class, 'fail', [
-                        $poolName, $channel, $data
+                        $poolName, $channel, $data, $queueConnection
                     ]
                 ),
             ];
@@ -131,7 +150,7 @@ class QueueRedisDriver
     /**
      * Remove data from delayed queue.
      */
-    public static function delete(?string $poolName = 'default', ?string $channel = '', $data = []): bool
+    public static function delete(?string $poolName = 'default', ?string $channel = '', mixed $data = [], mixed $queueConnection = null): bool
     {
         $redis = Redis::getRedis($poolName);
         $channel = static::getChannelConfig($channel);
@@ -141,15 +160,15 @@ class QueueRedisDriver
     /**
      * Remove data from reserved queue.
      */
-    public static function ack(?string $poolName = 'default', ?string $channel = '', mixed $data = []): bool
+    public static function ack(?string $poolName = 'default', ?string $channel = '', mixed $data = [], mixed $queueConnection = null): bool
     {
-        return static::remove($poolName, $channel, $data);
+        return static::remove($poolName, $channel, $data, $queueConnection);
     }
 
     /**
      * Remove data from reserved queue.
      */
-    public static function remove(?string $poolName = 'default', ?string $channel = '', mixed $data = []): bool
+    public static function remove(?string $poolName = 'default', ?string $channel = '', mixed $data = [], mixed $queueConnection = null): bool
     {
         $redis = Redis::getRedis($poolName);
         $channel = static::getChannelConfig($channel);
@@ -160,11 +179,11 @@ class QueueRedisDriver
      * Remove data from reserved queue.
      * lPush data to failed queue.
      */
-    public static function fail(?string $poolName = 'default', ?string $channel = '', mixed $data = []): bool
+    public static function fail(?string $poolName = 'default', ?string $channel = '', mixed $data = [], mixed $queueConnection = null): bool
     {
         $redis = Redis::getRedis($poolName);
         $channel = static::getChannelConfig($channel);
-        if (static::remove($poolName, $channel, $data)) {//Remove data from reserved queue.
+        if (static::remove($poolName, $channel, $data, $queueConnection)) {//Remove data from reserved queue.
             foreach ($data as $item) {
                 $redis->lPush($channel->getFailed(), $item);
             }
@@ -174,7 +193,7 @@ class QueueRedisDriver
         return false;
     }
 
-    public static function reload(?string $poolName = 'default', ?string $channel = '', string $queue = null): int
+    public static function reload(?string $poolName = 'default', ?string $channel = '', string $queue = null, mixed $queueConnection = null): int
     {
         $redis = Redis::getRedis($poolName);
         $_channel = static::getChannelConfig($channel);
@@ -189,13 +208,33 @@ class QueueRedisDriver
         }
 
         $num = 0;
-        while ($redis->rpoplpush($channel, $_channel->getWaiting())) {
-            ++$num;
+        if (static::getQueueType('waiting', $queueConnection) === 'zset') {
+
+            $res = $redis->rpop($channel, $redis->lLen($channel));
+            if (empty($res)) {//如果待执行队列没有数据了，就跳出整个循环
+                return $num;
+            }
+
+            $scoresAndMems = [];
+            $time = time();
+            foreach ($res as $index => $item) {
+                $scoresAndMems[] = $time + $index;
+                $scoresAndMems[] = $item;
+                ++$num;
+            }
+
+            $redis->zAdd($_channel->getWaiting(), ...$scoresAndMems);
+        } else {
+            while ($redis->rpoplpush($channel, $_channel->getWaiting())) {
+                ++$num;
+            }
         }
+
+
         return $num;
     }
 
-    public static function flush(?string $poolName = 'default', ?string $channel = '', string $queue = null): bool
+    public static function flush(?string $poolName = 'default', ?string $channel = '', string $queue = null, mixed $queueConnection = null): bool
     {
         $redis = Redis::getRedis($poolName);
         $_channel = static::getChannelConfig($channel);
@@ -208,12 +247,20 @@ class QueueRedisDriver
         return (bool)$redis->del($channel);
     }
 
-    public static function info(?string $poolName = 'default', ?string $channel = ''): array
+    public static function info(?string $poolName = 'default', ?string $channel = '', mixed $queueConnection = null): array
     {
         $redis = Redis::getRedis($poolName);
         $channel = static::getChannelConfig($channel);
+
+        $waitingLen = 0;
+        if (static::getQueueType('waiting', $queueConnection) === 'zset') {
+            $waitingLen = $redis->zCard($channel->getWaiting());
+        } else {
+            $waitingLen = $redis->lLen($channel->getWaiting());
+        }
+
         return [
-            'waiting' => $redis->lLen($channel->getWaiting()),
+            'waiting' => $waitingLen,
             'delayed' => $redis->zCard($channel->getDelayed()),
             'failed' => $redis->lLen($channel->getFailed()),
             'timeout' => $redis->lLen($channel->getTimeout()),
@@ -221,7 +268,7 @@ class QueueRedisDriver
         ];
     }
 
-    protected function retry(MessageInterface $message): bool
+    protected function retry(MessageInterface $message, mixed $queueConnection = null): bool
     {
         $data = $this->packer->pack($message);
 
@@ -230,7 +277,7 @@ class QueueRedisDriver
         return $this->redis->zAdd($this->channel->getDelayed(), $delay, $data) > 0;
     }
 
-    protected function getRetrySeconds(int $attempts): int
+    protected function getRetrySeconds(int $attempts, mixed $queueConnection = null): int
     {
         if (!is_array($this->retrySeconds)) {
             return $this->retrySeconds;
@@ -247,18 +294,58 @@ class QueueRedisDriver
     /**
      * Move message to the waiting queue.
      */
-    public static function move(?string $poolName = 'default', ?string $from = '', ?string $to = ''): void
+    public static function move(?string $poolName = 'default', ?string $from = '', ?string $to = '', mixed $queueConnection = null): mixed
     {
         $now = time();
         $options = ['LIMIT' => [0, 100]];
         $redis = Redis::getRedis($poolName);
+
+        /**
+         * List elements from a Redis sorted set by score, highest to lowest
+         *
+         * @param string $key The sorted set to query.
+         * @param string $start The highest score to include in the results.
+         * @param string $end The lowest score to include in the results.
+         * @param array $options An options array that modifies how the command executes.
+         *                        <code>
+         *                        $options = [
+         *                            'WITHSCORES' => true|false # Whether or not to return scores
+         *                            'LIMIT' => [offset, count] # Return a subset of the matching members
+         *                        ];
+         *                        </code>
+         *
+         *                        NOTE:  For legacy reason, you may also simply pass `true` for the
+         *                               options argument, to mean `WITHSCORES`.
+         *
+         * @return array|false|Redis returns Redis if in multimode
+         *
+         * @throws RedisException
+         * @see zRangeByScore()
+         *
+         * @example
+         * $redis->zadd('oldest-people', 122.4493, 'Jeanne Calment', 119.2932, 'Kane Tanaka',
+         *                               119.2658, 'Sarah Knauss',   118.7205, 'Lucile Randon',
+         *                               117.7123, 'Nabi Tajima',    117.6301, 'Marie-Louise Meilleur',
+         *                               117.5178, 'Violet Brown',   117.3753, 'Emma Morano',
+         *                               117.2219, 'Chiyo Miyako',   117.0740, 'Misao Okawa');
+         *
+         * $redis->zRevRangeByScore('oldest-people', 122, 119);
+         * $redis->zRevRangeByScore('oldest-people', 'inf', 118);
+         * $redis->zRevRangeByScore('oldest-people', '117.5', '-inf', ['LIMIT' => [0, 1]]);
+         */
         if ($expired = $redis->zrevrangebyscore($from, (string)$now, '-inf', $options)) {
             foreach ($expired as $job) {
                 if ($redis->zRem($from, $job) > 0 && !empty($to)) {
-                    $redis->lPush($to, $job);
+                    if (false !== strpos($to, ':waiting') && static::getQueueType('waiting', $queueConnection) === 'zset') {
+                        $redis->zAdd($to, time(), $job);
+                    } else {
+                        $redis->lPush($to, $job);
+                    }
                 }
             }
         }
+
+        return $expired;
     }
 
 
