@@ -210,8 +210,13 @@ class QueueRedisDriver
         $num = 0;
         if (static::getQueueType('waiting', $queueConnection) === 'zset') {
 
-            $res = $redis->rpop($channel, $redis->lLen($channel));
-            if (empty($res)) {//如果待执行队列没有数据了，就跳出整个循环
+            $listLen=$redis->lLen($channel);
+            if(empty($listLen)){
+                return $num;
+            }
+
+            $res = $redis->rpop($channel, $listLen);
+            if (empty($res)||!is_array($res)) {//如果待执行队列没有数据了，就跳出整个循环
                 return $num;
             }
 
