@@ -13,6 +13,7 @@ declare(strict_types=1);
 namespace Business\Hyperf\Aspect\Hyperf\Database\Model;
 
 use function Hyperf\Collection\data_set;
+use function Hyperf\Coroutine\go;
 use function Hyperf\Support\call;
 use function Business\Hyperf\Utils\Collection\data_get;
 use function Hyperf\Tappable\tap;
@@ -177,6 +178,17 @@ class Builder extends AbstractAspect
             $dbOperation = data_get(static::$dbOperation, ($instance->exists ? 2 : 1), null);
 
             $srcInstance = clone $instance; //克隆原始model实例
+
+            $beforeFillHandle = data_get($handleData, 'beforeFill', []);
+            foreach ($beforeFillHandle as $func) {
+                try {
+                    call($func, [$srcInstance, &$values]);
+                } catch (Throwable $throwable) {
+                    go(function () use ($throwable) {
+                        throw $throwable;
+                    });
+                }
+            }
 
             if (empty($instance->exists)) {
 
