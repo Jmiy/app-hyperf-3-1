@@ -2,6 +2,7 @@
 
 namespace Business\Hyperf\Utils\Support\Facades;
 
+use Hyperf\Process\ProcessManager;
 use function Hyperf\Config\config;
 use function Hyperf\Support\make;
 use function Hyperf\Support\call;
@@ -37,9 +38,25 @@ class QueueRedisDriver
         return make(ChannelConfig::class, ['channel' => $channel]);
     }
 
-    public static function getQueueType(string $channel, mixed $queueConnection = null)
+    public static function getQueueConfig(mixed $key, mixed $queueConnection = null, mixed $default = null)
     {
-        return config('async_queue.' . $queueConnection . '.business.' . $channel);
+        $config = config('async_queue.' . $queueConnection);
+        $key = is_array($key) ? $key : [$key];
+        return data_get($config, $key, $default);
+    }
+
+    public static function getQueueBusinessConfig(mixed $channel, mixed $queueConnection = null, mixed $default = null)
+    {
+        return static::getQueueConfig(
+            Arr::collapse([
+                ['business'],
+                (is_array($channel) ? $channel : [$channel]),
+            ]),
+            $queueConnection,
+            $default
+        );
+
+//        return config('async_queue.' . $queueConnection . '.business.' . $channel);
     }
 
 
@@ -50,7 +67,7 @@ class QueueRedisDriver
 
         if ($delay === 0) {
 
-            if (static::getQueueType('waiting', $queueConnection) === 'zset') {
+            if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
                 return $redis->zAdd($channel->getWaiting(), time(), $data) > 0;
             } else {
                 return (bool)$redis->lPush($channel->getWaiting(), $data);
@@ -60,7 +77,14 @@ class QueueRedisDriver
         return $redis->zAdd($channel->getDelayed(), time() + $delay, $data) > 0;
     }
 
-    public static function pop(?string $poolName = 'default', ?string $channel = '', $limit = 50, $handleTimeout = 10, mixed $queueConnection = null): mixed
+    public static function pop(
+        string $poolName = 'default',
+        string $channel = '',
+        int    $limit = 50,
+        int    $handleTimeout = 10,
+        mixed  $queueConnection = null,
+        array  $extendData = []
+    ): mixed
     {
         $channel = static::getChannelConfig($channel);
         $redis = Redis::getRedis($poolName);
@@ -69,17 +93,23 @@ class QueueRedisDriver
         static::move($poolName, $channel->getDelayed(), $channel->getWaiting(), $queueConnection);
 
         //将执行超时的消息压入超时队列
-        static::move($poolName, $channel->getReserved(), $channel->getTimeout(), $queueConnection);
+        $reservedIsPush = static::getQueueBusinessConfig(['reserved', 'isPush'], $queueConnection, true);
+        if ($reservedIsPush === true) {
+            static::move($poolName, $channel->getReserved(), $channel->getTimeout(), $queueConnection);
+        }
+//        var_dump(__METHOD__, $reservedIsPush);
 
         //弹出待执行的消息
-
         $data = [];
-        if (static::getQueueType('waiting', $queueConnection) === 'zset') {
+        if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
             $data = static::move($poolName, $channel->getWaiting(), '', $queueConnection);
-            foreach ($data as $item) {
-                //将待执行的消息压入正在执行队列
-                $redis->zadd($channel->getReserved(), time() + $handleTimeout, $item);
+            if ($reservedIsPush === true) {
+                foreach ($data as $item) {
+                    //将待执行的消息压入正在执行队列
+                    $redis->zadd($channel->getReserved(), time() + $handleTimeout, $item);
+                }
             }
+
         } else {
             for ($i = 0; $i < $limit; $i++) {
 
@@ -90,28 +120,42 @@ class QueueRedisDriver
 
                 $item = $res[1];
                 $data[] = $item;
+                if ($reservedIsPush === true) {
+                    //将待执行的消息压入正在执行队列
+                    $redis->zadd($channel->getReserved(), time() + $handleTimeout, $item);
+                }
 
-                //将待执行的消息压入正在执行队列
-                $redis->zadd($channel->getReserved(), time() + $handleTimeout, $item);
             }
         }
 
         return $data;
     }
 
-    public static function consume(?string $poolName = 'default', ?string $channel = '', int $limit = 50, $handleTimeout = 10, $callBack = null, mixed $queueConnection = null): mixed
+    public static function consume(
+        string $poolName = 'default',
+        string $channel = '',
+        int    $limit = 50,
+        int    $handleTimeout = 10,
+        mixed  $callBack = null,
+        mixed  $queueConnection = null,
+        array  $extendData = []
+    ): mixed
     {
-        $data = static::pop($poolName, $channel, $limit, $handleTimeout, $queueConnection);
+        $data = static::pop($poolName, $channel, $limit, $handleTimeout, $queueConnection, $extendData);
 
+        $concurrentLimit = static::getQueueBusinessConfig(['concurrent', 'limit'], $queueConnection, 10);
         if (!empty($data)) {
-            $callback = static::getCallback($poolName, $channel, $data, $callBack, $queueConnection);
-
-            $concurrent = new Concurrent(10);
+            $callback = static::getCallback($poolName, $channel, $data, $callBack, $queueConnection, $extendData);
+            $concurrent = new Concurrent($concurrentLimit);
             $concurrent->create($callback);
         }
 
         //将超时队列消息重新入到待执行队列
-        static::reload($poolName, $channel, 'timeout', $queueConnection);
+        $reservedIsPush = static::getQueueBusinessConfig(['reserved', 'isPush'], $queueConnection, true);
+        if ($reservedIsPush === true) {
+            static::reload($poolName, $channel, 'timeout', $queueConnection);
+        }
+//        var_dump(__METHOD__, $reservedIsPush, $handleTimeout, $concurrentLimit);
 
         return $data;
     }
@@ -121,21 +165,39 @@ class QueueRedisDriver
         $info = static::info($poolName, $channel, $queueConnection);
     }
 
-    public static function getCallback(?string $poolName = 'default', ?string $channel = '', $data = [], $callBack = null, mixed $queueConnection = null): callable
+    public static function getCallback(
+        string $poolName = 'default',
+        string $channel = '',
+        mixed  $data = [],
+        mixed  $callBack = null,
+        mixed  $queueConnection = null,
+        array  $extendData = []
+    ): callable
     {
-        return function () use ($poolName, $channel, $data, $callBack, $queueConnection) {
+        return function () use ($poolName, $channel, $data, $callBack, $queueConnection, $extendData) {
 
             $handleCallBack = [
-                'ack' => getJobData(static::class, 'ack', [
-                        $poolName, $channel, $data, $queueConnection
-                    ]
-                ),
+//                'ack' => getJobData(static::class, 'ack', [
+//                        $poolName, $channel, $data, $queueConnection
+//                    ]
+//                ),
 
                 'fail' => getJobData(static::class, 'fail', [
                         $poolName, $channel, $data, $queueConnection
                     ]
                 ),
             ];
+
+            //Remove data from reserved queue.
+            $reservedIsPush = static::getQueueBusinessConfig(['reserved', 'isPush'], $queueConnection, true);
+            if ($reservedIsPush === true) {
+                $handleCallBack['ack'] = getJobData(static::class, 'ack', [
+                        $poolName, $channel, $data, $queueConnection
+                    ]
+                );
+            }
+
+//            var_dump('getCallback', $reservedIsPush, $handleCallBack);
 
             $service = data_get($callBack, Constant::SERVICE, '');
             $method = data_get($callBack, Constant::METHOD, '');
@@ -208,15 +270,15 @@ class QueueRedisDriver
         }
 
         $num = 0;
-        if (static::getQueueType('waiting', $queueConnection) === 'zset') {
+        if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
 
-            $listLen=$redis->lLen($channel);
-            if(empty($listLen)){
+            $listLen = $redis->lLen($channel);
+            if (empty($listLen)) {
                 return $num;
             }
 
             $res = $redis->rpop($channel, $listLen);
-            if (empty($res)||!is_array($res)) {//如果待执行队列没有数据了，就跳出整个循环
+            if (empty($res) || !is_array($res)) {//如果待执行队列没有数据了，就跳出整个循环
                 return $num;
             }
 
@@ -258,7 +320,7 @@ class QueueRedisDriver
         $channel = static::getChannelConfig($channel);
 
         $waitingLen = 0;
-        if (static::getQueueType('waiting', $queueConnection) === 'zset') {
+        if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
             $waitingLen = $redis->zCard($channel->getWaiting());
         } else {
             $waitingLen = $redis->lLen($channel->getWaiting());
@@ -341,7 +403,7 @@ class QueueRedisDriver
         if ($expired = $redis->zrevrangebyscore($from, (string)$now, '-inf', $options)) {
             foreach ($expired as $job) {
                 if ($redis->zRem($from, $job) > 0 && !empty($to)) {
-                    if (false !== strpos($to, ':waiting') && static::getQueueType('waiting', $queueConnection) === 'zset') {
+                    if (false !== strpos($to, ':waiting') && static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
                         $redis->zAdd($to, time(), $job);
                     } else {
                         $redis->lPush($to, $job);
