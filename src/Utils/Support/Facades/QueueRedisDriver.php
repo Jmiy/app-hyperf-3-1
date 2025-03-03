@@ -89,20 +89,21 @@ class QueueRedisDriver
         $channel = static::getChannelConfig($channel);
         $redis = Redis::getRedis($poolName);
 
+        $options = ['LIMIT' => [0, $limit]];
         //将延迟队列中到期的消息压入正在执行队列
-        static::move($poolName, $channel->getDelayed(), $channel->getWaiting(), $queueConnection);
+        static::move($poolName, $channel->getDelayed(), $channel->getWaiting(), $queueConnection, $options);
 
         //将执行超时的消息压入超时队列
         $reservedIsPush = static::getQueueBusinessConfig(['reserved', 'isPush'], $queueConnection, true);
         if ($reservedIsPush === true) {
-            static::move($poolName, $channel->getReserved(), $channel->getTimeout(), $queueConnection);
+            static::move($poolName, $channel->getReserved(), $channel->getTimeout(), $queueConnection, $options);
         }
 //        var_dump(__METHOD__, $reservedIsPush);
 
         //弹出待执行的消息
         $data = [];
         if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
-            $data = static::move($poolName, $channel->getWaiting(), '', $queueConnection);
+            $data = static::move($poolName, $channel->getWaiting(), '', $queueConnection, $options);
             if ($reservedIsPush === true) {
                 foreach ($data as $item) {
                     //将待执行的消息压入正在执行队列
@@ -361,10 +362,13 @@ class QueueRedisDriver
     /**
      * Move message to the waiting queue.
      */
-    public static function move(?string $poolName = 'default', ?string $from = '', ?string $to = '', mixed $queueConnection = null): mixed
+    public static function move(?string $poolName = 'default', ?string $from = '', ?string $to = '', mixed $queueConnection = null, mixed $options = ['LIMIT' => [0, 100]]): mixed
     {
         $now = time();
-        $options = ['LIMIT' => [0, 100]];
+        $options = Arr::collapse([
+            ['LIMIT' => [0, 100]],
+            $options
+        ]);
         $redis = Redis::getRedis($poolName);
 
         /**
