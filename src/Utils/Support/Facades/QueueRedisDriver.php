@@ -177,22 +177,21 @@ class QueueRedisDriver
     {
         return function () use ($poolName, $channel, $data, $callBack, $queueConnection, $extendData) {
 
-            $handleCallBack = [
-//                'ack' => getJobData(static::class, 'ack', [
-//                        $poolName, $channel, $data, $queueConnection
-//                    ]
-//                ),
-
-                'fail' => getJobData(static::class, 'fail', [
-                        $poolName, $channel, $data, $queueConnection
-                    ]
-                ),
-            ];
+            $handleCallBack = [];
 
             //Remove data from reserved queue.
             $reservedIsPush = static::getQueueBusinessConfig(['reserved', 'isPush'], $queueConnection, true);
             if ($reservedIsPush === true) {
                 $handleCallBack['ack'] = getJobData(static::class, 'ack', [
+                        $poolName, $channel, $data, $queueConnection
+                    ]
+                );
+            }
+
+            //Remove data from reserved queue. lPush data to failed queue.
+            $failedIsPush = static::getQueueBusinessConfig(['failed', 'isPush'], $queueConnection, true);
+            if ($failedIsPush === true) {
+                $handleCallBack['fail'] = getJobData(static::class, 'fail', [
                         $poolName, $channel, $data, $queueConnection
                     ]
                 );
