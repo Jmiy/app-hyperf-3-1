@@ -65,6 +65,10 @@ class QueueRedisDriver
         $channel = static::getChannelConfig($channel);
         $redis = Redis::getRedis($poolName);
 
+        if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset' && false !== $redis->zScore($channel->getReserved(), $data)) {
+            return true;
+        }
+
         if ($delay === 0) {
 
             if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
@@ -77,11 +81,24 @@ class QueueRedisDriver
         return $redis->zAdd($channel->getDelayed(), time() + $delay, $data) > 0;
     }
 
+    /**
+     * @param string $poolName
+     * @param string $channel
+     * @param int $limit
+     * @param int $handleTimeout 默认：-1  表示使用配置控制
+     * @param mixed|null $queueConnection
+     * @param array $extendData
+     * @return mixed
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
+     * @throws \RedisException
+     * @throws \Throwable
+     */
     public static function pop(
         string $poolName = 'default',
         string $channel = '',
         int    $limit = 50,
-        int    $handleTimeout = 10,
+        int    $handleTimeout = -1,
         mixed  $queueConnection = null,
         array  $extendData = []
     ): mixed
@@ -89,18 +106,23 @@ class QueueRedisDriver
         $channel = static::getChannelConfig($channel);
         $redis = Redis::getRedis($poolName);
 
+        if ($handleTimeout == -1) {
+            $handleTimeout = static::getQueueBusinessConfig(['handle_timeout'], $queueConnection, 86400);
+        }
+//        var_dump(__METHOD__, 'handleTimeout==>' . $handleTimeout);
+
         $options = ['LIMIT' => [0, $limit]];
         //将延迟队列中到期的消息压入正在执行队列
         static::move($poolName, $channel->getDelayed(), $channel->getWaiting(), $queueConnection, $options);
 
         //将执行超时的消息压入超时队列
-        $reservedIsPush = static::getQueueBusinessConfig(['reserved', 'isPush'], $queueConnection, true);
-        if ($reservedIsPush === true) {
+        $timeoutIsPush = static::getQueueBusinessConfig(['timeout', 'isPush'], $queueConnection, true);
+        if ($timeoutIsPush === true) {
             static::move($poolName, $channel->getReserved(), $channel->getTimeout(), $queueConnection, $options);
         }
-//        var_dump(__METHOD__, $reservedIsPush);
 
         //弹出待执行的消息
+        $reservedIsPush = static::getQueueBusinessConfig(['reserved', 'isPush'], $queueConnection, true);
         $data = [];
         if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
             $data = static::move($poolName, $channel->getWaiting(), '', $queueConnection, $options);
@@ -136,7 +158,7 @@ class QueueRedisDriver
         string $poolName = 'default',
         string $channel = '',
         int    $limit = 50,
-        int    $handleTimeout = 10,
+        int    $handleTimeout = -1,
         mixed  $callBack = null,
         mixed  $queueConnection = null,
         array  $extendData = []
@@ -152,11 +174,11 @@ class QueueRedisDriver
         }
 
         //将超时队列消息重新入到待执行队列
-        $reservedIsPush = static::getQueueBusinessConfig(['reserved', 'isPush'], $queueConnection, true);
-        if ($reservedIsPush === true) {
+        $timeoutIsPush = static::getQueueBusinessConfig(['timeout', 'isPush'], $queueConnection, true);
+        if ($timeoutIsPush === true) {
             static::reload($poolName, $channel, 'timeout', $queueConnection);
         }
-//        var_dump(__METHOD__, $reservedIsPush, $handleTimeout, $concurrentLimit);
+//        var_dump(__METHOD__, $timeoutIsPush, $handleTimeout, $concurrentLimit);
 
         return $data;
     }
