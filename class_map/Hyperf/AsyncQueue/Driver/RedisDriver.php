@@ -60,7 +60,6 @@ class RedisDriver extends Driver
 
     public function push(JobInterface $job, int $delay = 0): bool
     {
-        var_dump(__METHOD__);
         $message = make(JobMessage::class, [$job]);
         $data = $this->packer->pack($message);
 
@@ -90,7 +89,6 @@ class RedisDriver extends Driver
 
     public function pop(): array
     {
-        var_dump(__METHOD__);
         $this->move($this->channel->getDelayed(), $this->channel->getWaiting());
         $this->move($this->channel->getReserved(), $this->channel->getTimeout());
 
@@ -219,7 +217,6 @@ class RedisDriver extends Driver
      */
     protected function move(string $from, string $to, array $options = ['LIMIT' => [0, 100]]): mixed
     {
-        var_dump(__METHOD__);
         $now = time();
 //        $options = ['LIMIT' => [0, 100]];
         $options = Arr::collapse([
