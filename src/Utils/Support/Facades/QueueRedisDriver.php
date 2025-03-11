@@ -435,8 +435,8 @@ class QueueRedisDriver
                         } else {
                             $redis->lPush($to, $job);
                         }
-                        $data[] = $job;
                     }
+                    $data[] = $job;
                 }
             }
         }
