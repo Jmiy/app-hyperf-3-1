@@ -425,19 +425,23 @@ class QueueRedisDriver
          * $redis->zRevRangeByScore('oldest-people', 'inf', 118);
          * $redis->zRevRangeByScore('oldest-people', '117.5', '-inf', ['LIMIT' => [0, 1]]);
          */
+        $data = [];
         if ($expired = $redis->zrevrangebyscore($from, (string)$now, '-inf', $options)) {
             foreach ($expired as $job) {
-                if ($redis->zRem($from, $job) > 0 && !empty($to)) {
-                    if (false !== strpos($to, ':waiting') && static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
-                        $redis->zAdd($to, time(), $job);
-                    } else {
-                        $redis->lPush($to, $job);
+                if ($redis->zRem($from, $job) > 0) {
+                    if (!empty($to)) {
+                        if (false !== strpos($to, ':waiting') && static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
+                            $redis->zAdd($to, time(), $job);
+                        } else {
+                            $redis->lPush($to, $job);
+                        }
+                        $data[] = $job;
                     }
                 }
             }
         }
 
-        return $expired;
+        return $data;
     }
 
 

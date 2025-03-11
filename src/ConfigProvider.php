@@ -39,6 +39,7 @@ use Hyperf\Coroutine\Concurrent as CoroutineConcurrent;
 use OSS\Model\ObjectVersionListInfo;
 use OSS\Signer\SignerV1;
 use OSS\Signer\SignerV4;
+use Hyperf\AsyncQueue\Driver\RedisDriver as AsyncQueueRedisDriver;
 
 
 
@@ -77,6 +78,7 @@ class ConfigProvider
                         Client::class => __DIR__ . '/../class_map/GuzzleHttp/Client.php',
                         RedisDriver::class => __DIR__ . '/../class_map/Hyperf/Cache/Driver/RedisDriver.php',
 //                        Driver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/Driver.php',
+                        AsyncQueueRedisDriver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/RedisDriver.php',
 
 //                        Concurrent::class => __DIR__ . '/../class_map/Hyperf/Utils/Coroutine/Concurrent.php',
                         CoroutineConcurrent::class => __DIR__ . '/../class_map/Hyperf/Coroutine/Concurrent.php',
@@ -100,6 +102,7 @@ class ConfigProvider
                         ObjectVersionListInfo::class => __DIR__ . '/../class_map/OSS/Model/ObjectVersionListInfo.php',
                         SignerV1::class => __DIR__ . '/../class_map/OSS/Signer/SignerV1.php',
                         SignerV4::class => __DIR__ . '/../class_map/OSS/Signer/SignerV4.php',
+
                     ],
                 ],
             ],

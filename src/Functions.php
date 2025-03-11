@@ -113,7 +113,10 @@ if (!function_exists('pushQueue')) {
         $channel = $channel !== null ? $channel : data_get($job, Constant::QUEUE_CHANNEL);
 
         if (is_array($job)) {
-            data_set($job, 'push_time', date('Y-m-d H:i:s'));
+            $waitingType = \Hyperf\Config\config('async_queue.' . $connection . '.waiting');
+            if ($waitingType !== 'zset') {
+                data_set($job, 'push_time', date('Y-m-d H:i:s'));
+            }
             $data = [
                 Constant::DATA => $job
             ];
