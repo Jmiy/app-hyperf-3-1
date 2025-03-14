@@ -148,9 +148,35 @@ class RedisDriver extends Driver
         }
 
         $num = 0;
-        while ($this->redis->rpoplpush($channel, $this->channel->getWaiting())) {
-            ++$num;
+
+        $waitingType = data_get($this->config, ['waiting']);
+        if ($waitingType === 'zset') {
+            $listLen = $this->redis->lLen($channel);
+            if (empty($listLen)) {
+                return $num;
+            }
+
+            $res = $this->redis->rpop($channel, $listLen);
+            if (empty($res) || !is_array($res)) {//如果待执行队列没有数据了，就跳出整个循环
+                return $num;
+            }
+
+            $time = time();
+            $scoresAndMems = [];
+            foreach ($res as $index => $item) {
+                $scoresAndMems[] = $time;
+                $scoresAndMems[] = $item;
+                ++$time;
+                ++$num;
+            }
+
+            $this->redis->zAdd($this->channel->getWaiting(), ...$scoresAndMems);
+        } else {
+            while ($this->redis->rpoplpush($channel, $this->channel->getWaiting())) {
+                ++$num;
+            }
         }
+
         return $num;
     }
 

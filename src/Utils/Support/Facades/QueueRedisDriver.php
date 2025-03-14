@@ -304,11 +304,12 @@ class QueueRedisDriver
                 return $num;
             }
 
-            $scoresAndMems = [];
             $time = time();
+            $scoresAndMems = [];
             foreach ($res as $index => $item) {
-                $scoresAndMems[] = $time + $index;
+                $scoresAndMems[] = $time;
                 $scoresAndMems[] = $item;
+                ++$time;
                 ++$num;
             }
 
