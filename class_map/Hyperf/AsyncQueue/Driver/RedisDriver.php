@@ -64,7 +64,14 @@ class RedisDriver extends Driver
         $data = $this->packer->pack($message);
 
         $waitingType = data_get($this->config, ['waiting']);
-        if ($waitingType === 'zset' && false !== $this->redis->zScore($this->channel->getReserved(), $data)) {
+        if (
+            $waitingType === 'zset' &&
+            (
+                false !== $this->redis->zScore($this->channel->getWaiting(), $data)
+                || false !== $this->redis->zScore($this->channel->getDelayed(), $data)
+                || false !== $this->redis->zScore($this->channel->getReserved(), $data)
+            )
+        ) {
             return true;
         }
 
