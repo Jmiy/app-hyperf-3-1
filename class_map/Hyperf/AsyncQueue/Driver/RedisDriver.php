@@ -18,6 +18,7 @@ use Hyperf\AsyncQueue\JobInterface;
 use Hyperf\AsyncQueue\JobMessage;
 use Hyperf\AsyncQueue\MessageInterface;
 use Hyperf\Collection\Arr;
+use Hyperf\Coroutine\Coroutine;
 use Hyperf\Redis\RedisFactory;
 use Hyperf\Redis\RedisProxy;
 use Psr\Container\ContainerInterface;
@@ -105,6 +106,7 @@ class RedisDriver extends Driver
             $expired = $this->move($this->channel->getWaiting(), '', $options);
 
             if (empty($expired)) {
+                Coroutine::sleep($this->timeout);
                 return [false, null];
             }
 
