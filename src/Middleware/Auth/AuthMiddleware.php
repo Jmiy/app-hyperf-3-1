@@ -70,7 +70,7 @@ class AuthMiddleware implements MiddlewareInterface
         $_ips = explode(',', $ips);
         $clientIp = getClientIP();
         if ($ips != 'all' && !in_array($clientIp, $_ips)) {
-            $responseReasonPhrase .= '-clientIp:' . $clientIp;
+            $responseReasonPhrase .= (PHP_EOL . 'clientIp:' . $clientIp);
             $authRs = false;
         }
         /****************进行ip校验 end   ***************/
@@ -106,7 +106,10 @@ class AuthMiddleware implements MiddlewareInterface
 
             $error = new BusinessException(
                 $responseStatusCode,
-                $responseReasonPhrase . ('-' . $request->getHeaderLine('host'))
+                $responseReasonPhrase . PHP_EOL . ('-' . $request->getHeaderLine('host'))
+                . PHP_EOL . (' -clientIp：' . $clientIp)
+                . PHP_EOL . (' -clientToken：' . $token)
+                . PHP_EOL . (' -' . $tokenKey . '：' . $authorization)
             );
 
             go(function () use ($error) {
