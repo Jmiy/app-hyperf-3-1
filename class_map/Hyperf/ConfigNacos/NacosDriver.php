@@ -15,6 +15,7 @@ namespace Hyperf\ConfigNacos;
 use Hyperf\Collection\Arr;
 use Hyperf\ConfigCenter\AbstractDriver;
 use Hyperf\ConfigCenter\Contract\ClientInterface as ConfigClientInterface;
+use Hyperf\Nacos\Module;
 use Hyperf\Nacos\Protobuf\ListenHandler\ConfigChangeNotifyRequestHandler;
 use Hyperf\Nacos\Protobuf\Response\ConfigQueryResponse;
 use Psr\Container\ContainerInterface;
@@ -39,7 +40,7 @@ class NacosDriver extends AbstractDriver
 
     public function createMessageFetcherLoop(): void
     {
-        if (!$this->config->get('config_center.drivers.nacos.client.grpc.enable', false)) {
+        if (! $this->config->get('config_center.drivers.nacos.client.grpc.enable', false)) {
             parent::createMessageFetcherLoop();
             return;
         }
@@ -71,8 +72,8 @@ class NacosDriver extends AbstractDriver
         $_application = [];
         $listeners = $this->config->get('config_center.drivers.nacos.listener_config', []);
         foreach ($listeners as $key => $item) {
-            $dataId = $item['data_id'];
-            $group = $item['group'];
+            $dataId = $item['data_id'] ?? '';
+            $group = $item['group'] ?? '';
             $tenant = $item['tenant'] ?? '';
             $type = $item['type'] ?? null;
 
@@ -107,10 +108,11 @@ class NacosDriver extends AbstractDriver
                 $this->client->getConfig()->password = $consumerPassword;
             }
 
-            if (!isset($_application[$this->client->getConfig()->getBaseUri()])) {
-                $_application[$this->client->getConfig()->getBaseUri()] = $this->client->getClient();
+            $baseUri = $this->client->getConfig()->getBaseUri();
+            if (!isset($_application[$baseUri])) {
+                $_application[$baseUri] = $this->client->getClient();
             }
-            $application = $_application[$this->client->getConfig()->getBaseUri()];
+            $application = $_application[$baseUri];
 
             if ($address !== null) {
                 $this->client->getConfig()->baseUri = $baseUri;
@@ -123,34 +125,27 @@ class NacosDriver extends AbstractDriver
             }
             /**************兼容配置中心独立配置的情况 end   ************************************/
 
-            $client = $application->grpc->get($tenant);
+            $client = $application->grpc->get($tenant, Module::CONFIG);
             $client->listenConfig($group, $dataId, new ConfigChangeNotifyRequestHandler(function (ConfigQueryResponse $response) use ($key, $type) {
-//                $this->updateConfig([
-//                    $key => $this->client->decode($response->getContent(), $type),
-//                ]);
+                $config = $this->client->decode($response->getContent(), $type);
+                $prevConfig = $this->config->get($key, []);
 
-                $config = [
-                    $key => $this->client->decode($response->getContent(), $type),
-                ];
-                $prevConfig = [$key => $this->config->get($key, [])];
-
-                $this->updateConfig($config);
-
-                $mode = strtolower($this->config->get('config_center.mode', Mode::PROCESS));
-                if ($mode === Mode::PROCESS && $config !== $prevConfig) {
-                    $this->syncConfig($config, $prevConfig);
+                if ($config !== $prevConfig) {
+                    $this->syncConfig(
+                        [$key => $config],
+                        [$key => $prevConfig],
+                    );
                 }
-
             }));
         }
 
         foreach ($_application as $application) {
-            foreach ($application->grpc->getClients() as $client) {
+            foreach ($application->grpc->moduleClients(Module::CONFIG) as $client) {
                 $client->listen();
             }
         }
 
-//        foreach ($application->grpc->getClients() as $client) {
+//        foreach ($application->grpc->moduleClients(Module::CONFIG) as $client) {
 //            $client->listen();
 //        }
     }
