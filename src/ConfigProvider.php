@@ -22,6 +22,7 @@ use Hyperf\Database\Model\Relations\HasManyThrough;
 //use Hyperf\AsyncQueue\Driver\Driver;
 use Hyperf\RateLimit\Aspect\RateLimitAnnotationAspect;
 
+use Hyperf\ConfigCenter\AbstractDriver;
 use Hyperf\Nacos\Config;
 use Hyperf\ConfigNacos\NacosClient as ConfigNacosClient;
 use Hyperf\ConfigNacos\Client as ConfigClient;
@@ -85,6 +86,7 @@ class ConfigProvider
 
                         RateLimitAnnotationAspect::class => __DIR__ . '/../class_map/Hyperf/RateLimit/Aspect/RateLimitAnnotationAspect.php',
 
+                        AbstractDriver::class => __DIR__ . '/../class_map/Hyperf/ConfigCenter/AbstractDriver.php',
                         ConfigNacosClient::class => __DIR__ . '/../class_map/Hyperf/ConfigNacos/NacosClient.php',
                         ConfigClient::class => __DIR__ . '/../class_map/Hyperf/ConfigNacos/Client.php',
                         ConfigNacosDriver::class => __DIR__ . '/../class_map/Hyperf/ConfigNacos/NacosDriver.php',

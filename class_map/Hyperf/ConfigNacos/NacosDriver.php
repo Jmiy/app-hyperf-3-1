@@ -162,6 +162,7 @@ class NacosDriver extends AbstractDriver
             }
 
             $this->config->set($key, $conf);
+            $this->logger->debug(sprintf('Config [%s] is updated', $key));
         }
     }
 }
