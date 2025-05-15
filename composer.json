@@ -12,7 +12,11 @@
         "hyperf/tracer": "^3.0.0",
         "hyperf/translation": "^3.0.0",
         "hyperf/validation": "^3.0.0",
-        "jmiy/hyperf-ding-notice-3-1": "dev-main"
+        "jmiy/hyperf-ding-notice-3-1": "dev-main",
+        "hyperf/grpc": "^3.1",
+        "hyperf/grpc-client": "^3.1",
+        "hyperf/grpc-server": "^3.1",
+        "dtm/dtm-client": "^0.3.5"
     },
     "autoload":{
         "psr-4":{
