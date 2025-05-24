@@ -18,6 +18,7 @@ use DtmClient\Constants\Result;
 use DtmClient\Exception\FailureException;
 use DtmClient\Exception\OngingException;
 use DtmClient\Exception\RuntimeException;
+use DtmClient\TransContext;
 use Hyperf\Collection\Arr;
 use Hyperf\Context\Context;
 use Hyperf\Contract\ConfigInterface;
@@ -51,13 +52,20 @@ class DtmMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
 //        $queryParams = $request->getQueryParams() ?: $request->getParsedBody();
-        $queryParams = $request->getParsedBody() + $request->getQueryParams();
+        $queryParams = Arr::collapse([$request->getParsedBody(), $request->getQueryParams()]);
         $headers = $request->getHeaders();
-        $transType = $headers['dtm-trans_type'][0] ?? $queryParams['trans_type'] ?? null;
-        $gid = $headers['dtm-gid'][0] ?? $queryParams['gid'] ?? null;
-        $branchId = $headers['dtm-branch_id'][0] ?? $queryParams['branch_id'] ?? null;
-        $op = $headers['dtm-op'][0] ?? $queryParams['op'] ?? null;
-        $phase2Url = $headers['dtm-phase2_url'][0] ?? $queryParams['phase2_url'] ?? null;
+//        $transType = $headers['dtm-trans_type'][0] ?? $queryParams['trans_type'] ?? null;
+//        $gid = $headers['dtm-gid'][0] ?? $queryParams['gid'] ?? null;
+//        $branchId = $headers['dtm-branch_id'][0] ?? $queryParams['branch_id'] ?? null;
+//        $op = $headers['dtm-op'][0] ?? $queryParams['op'] ?? null;
+//        $phase2Url = $headers['dtm-phase2_url'][0] ?? $queryParams['phase2_url'] ?? null;
+//        $dtm = $headers['dtm-dtm'][0] ?? null;
+
+        $transType = $queryParams['trans_type'] ?? $headers['dtm-trans_type'][0] ?? null;
+        $gid = $queryParams['gid'] ?? $headers['dtm-gid'][0] ?? null;
+        $branchId = $queryParams['branch_id'] ?? $headers['dtm-branch_id'][0] ?? null;
+        $op = $queryParams['op'] ?? $headers['dtm-op'][0] ?? null;
+        $phase2Url = $queryParams['phase2_url'] ?? $headers['dtm-phase2_url'][0] ?? null;
         $dtm = $headers['dtm-dtm'][0] ?? null;
 
 //        var_dump(
@@ -73,15 +81,13 @@ class DtmMiddleware implements MiddlewareInterface
         if ($transType && $gid && $branchId && $op) {
             $this->barrier->barrierFrom($transType, $gid, $branchId, $op, $phase2Url, $dtm);
 
-            $requestBodyContents=data_get($queryParams,['requestBodyContents']) ?? '';
+            $requestBodyContents = data_get($queryParams, ['requestBodyContents']) ?? (data_get($headers, ['x-jmiy-request-body', 0]) ?? '');
             $header = [
-                'dtm-trans_type' => $transType,
                 'dtm-gid' => $gid,
+                'dtm-trans_type' => $transType,
                 'dtm-branch_id' => $branchId,
                 'dtm-op' => $op,
-                'dtm-phase2_url' => $phase2Url ?? '',
-                'dtm-dtm' => $dtm ?? '',
-                'requestBodyContents' => $requestBodyContents,
+                'x-jmiy-request-body' => $requestBodyContents,
             ];
 
             //设置 协程上下文请求数据
@@ -94,6 +100,12 @@ class DtmMiddleware implements MiddlewareInterface
             ]);
             Context::set(Constant::CONTEXT_REQUEST_DATA, $contextRequestData);
             BaseConsumer::setHeaders($header);
+
+            if (isset($contextRequestData['customData'])) {
+                unset($contextRequestData['requestBodyContents']);
+                TransContext::setCustomData(json_encode($contextRequestData));
+            }
+
         }
 
         /** @var Dispatched $dispatched */
