@@ -83,7 +83,7 @@ class BloomFilter
      * @param string $item 要检查的元素
      * @return bool 如果可能存在返回true，否则返回false
      */
-    public function exists(string $key, string $item, ?int $size = 10000, ?string $poolName = 'default')
+    public static function exists(string $key, string $item, ?int $size = 10000, ?string $poolName = 'default')
     {
         $redis = Redis::getRedis($poolName);
         foreach (static::$hashFunctions as $hashFn) {
