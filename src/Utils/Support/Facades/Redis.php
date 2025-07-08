@@ -127,7 +127,7 @@ class Redis
      *
      * @param string $key
      * @param string $hashKey
-     * @param int    $value (integer) value that will be added to the member's value
+     * @param int $value (integer) value that will be added to the member's value
      * @param int|null $seconds 缓存时间  单位秒(支持：0.02)
      * @param string $poolName 连接池
      *
@@ -163,14 +163,14 @@ class Redis
     /**
      * Adds the specified member with a given score to the sorted set stored at key
      *
-     * @param string       $key     Required key
-     * @param array        $options Options if needed
-     * @param float        $score1  Required score
-     * @param string|mixed $value1  Required value
-     * @param float        $score2  Optional score
-     * @param string|mixed $value2  Optional value
-     * @param float        $scoreN  Optional score
-     * @param string|mixed $valueN  Optional value
+     * @param string $key Required key
+     * @param array $options Options if needed
+     * @param float $score1 Required score
+     * @param string|mixed $value1 Required value
+     * @param float $score2 Optional score
+     * @param string|mixed $value2 Optional value
+     * @param float $scoreN Optional score
+     * @param string|mixed $valueN Optional value
      *
      * @return int Number of values added
      *
@@ -227,8 +227,8 @@ class Redis
      * Increment the number stored at key by one.
      * If the second argument is filled, it will be used as the integer value of the increment.
      *
-     * @param string $key   key
-     * @param int    $value value that will be added to key (only for incrBy)
+     * @param string $key key
+     * @param int $value value that will be added to key (only for incrBy)
      *
      * @return int the new value
      *
@@ -252,6 +252,45 @@ class Redis
 
         $instance->multi();
         $instance->incrBy($key, $value);
+        $instance->pexpire($key, $seconds * 1000);
+        $manyResult = $instance->exec();
+
+        return [
+            'result' => data_get($manyResult, 0),
+            'pexpire' => data_get($manyResult, 1),
+        ];
+    }
+
+    /**
+     * Changes a single bit of a string.
+     *
+     * @param string $key
+     * @param int $offset
+     * @param bool|int $value bool or int (1 or 0)
+     *
+     * @return false|int|Redis 0 or 1, the value of the bit before it was set or Redis if in multimode
+     *
+     * @throws RedisException
+     *
+     * @link    https://redis.io/commands/setbit
+     * @example
+     * <pre>
+     * $redis->set('key', "*");     // ord("*") = 42 = 0x2f = "0010 1010"
+     * $redis->setBit('key', 5, 1); // returns 0
+     * $redis->setBit('key', 7, 1); // returns 0
+     * $redis->get('key');          // chr(0x2f) = "/" = b("0010 1111")
+     * </pre>
+     */
+    public static function setBit($key, $offset, $value, int $seconds = null, string $poolName = 'default')
+    {
+        $instance = static::getRedis($poolName);
+
+        if ($seconds === null) {
+            return $instance->setBit($key, $offset, $value);
+        }
+
+        $instance->multi();
+        $instance->setBit($key, $offset, $value);
         $instance->pexpire($key, $seconds * 1000);
         $manyResult = $instance->exec();
 
