@@ -62,40 +62,7 @@ class BloomFilter
     }
 
     /**
-     * 添加元素到布隆过滤器
-     * @param string $item 要添加的元素
-     */
-    public static function add(string $key, string $item, ?int $size = 10000, int $seconds = null, string $poolName = 'default')
-    {
-        foreach (static::$hashFunctions as $hashFn) {
-            $hash = call($hashFn, [$item]);
-            $hash = $hash % $size;
-
-            Redis::setBit($key, $hash, true, $seconds, $poolName);
-        }
-    }
-
-    /**
-     * 检查元素是否可能在布隆过滤器中
-     * @param string $item 要检查的元素
-     * @return bool 如果可能存在返回true，否则返回false
-     */
-    public static function exists(string $key, string $item, ?int $size = 10000, ?string $poolName = 'default')
-    {
-        $redis = Redis::getRedis($poolName);
-        foreach (static::$hashFunctions as $hashFn) {
-            $hash = call($hashFn, [$item]);
-            $hash = $hash % $size;
-
-            if ($redis->getBit($key, $hash) == 0) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    /**
+     * 布隆过滤器参数计算函数
      * @param int $n 预期元素数量
      * @param float $p 可接受的误判率（0 < p < 1）
      * @return array
@@ -172,5 +139,42 @@ class BloomFilter
 
         return $hashFunctions;
     }
+
+    /**
+     * 添加元素到布隆过滤器
+     * @param string $item 要添加的元素
+     */
+    public static function add(string $key, string $item, int $k, ?int $size = 10000, int $seconds = null, string $poolName = 'default')
+    {
+        $hashFunctions = static::generateHashFunctions($k);
+        foreach ($hashFunctions as $hashFn) {
+            $hash = call($hashFn, [$item]);
+            $hash = $hash % $size;
+
+            Redis::setBit($key, $hash, true, $seconds, $poolName);
+        }
+    }
+
+    /**
+     * 检查元素是否可能在布隆过滤器中
+     * @param string $item 要检查的元素
+     * @return bool 如果可能存在返回true，否则返回false
+     */
+    public static function exists(string $key, string $item, int $k, ?int $size = 10000, ?string $poolName = 'default')
+    {
+        $redis = Redis::getRedis($poolName);
+        $hashFunctions = static::generateHashFunctions($k);
+        foreach ($hashFunctions as $hashFn) {
+            $hash = call($hashFn, [$item]);
+            $hash = $hash % $size;
+
+            if ($redis->getBit($key, $hash) == 0) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
 
 }
