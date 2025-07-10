@@ -68,11 +68,8 @@ class BloomFilter
     public static function add(string $key, string $item, ?int $size = 10000, int $seconds = null, string $poolName = 'default')
     {
         foreach (static::$hashFunctions as $hashFn) {
-
-            if (method_exists(static::class, $hashFn)) {
-                $hashFn = [static::class, $hashFn];
-            }
-            $hash = call($hashFn, [$item, $size]);
+            $hash = call($hashFn, [$item]);
+            $hash = $hash % $size;
 
             Redis::setBit($key, $hash, true, $seconds, $poolName);
         }
@@ -87,11 +84,8 @@ class BloomFilter
     {
         $redis = Redis::getRedis($poolName);
         foreach (static::$hashFunctions as $hashFn) {
-
-            if (method_exists(static::class, $hashFn)) {
-                $hashFn = [static::class, $hashFn];
-            }
-            $hash = call($hashFn, [$item, $size]);
+            $hash = call($hashFn, [$item]);
+            $hash = $hash % $size;
 
             if ($redis->getBit($key, $hash) == 0) {
                 return false;
@@ -99,6 +93,84 @@ class BloomFilter
         }
 
         return true;
+    }
+
+    /**
+     * @param int $n 预期元素数量
+     * @param float $p 可接受的误判率（0 < p < 1）
+     * @return array
+     */
+    public static function calculateBloomFilterParameters(int $n, float $p)
+    {
+        // 计算位数组大小 m = - (n * ln(p)) / (ln(2)^2)
+        // log(float $num, float $base = M_E)以 base 为底 num 的对数，如果未指定 num 则为自然对数。 例如：log(100,10)=2 log(2,2)=1  ln(p)=log(p)
+        // pow(mixed $num, mixed $exponent) num 的 exponent 次方。如果两个参数都是非负整数且结果可以用整数表示，则返回 int 类型，否则返回 float。
+        $m = -($n * log($p)) / pow(log(2), 2);
+        $m = ceil($m); // 向上取整
+
+        // 计算最优哈希函数数量 k = (m / n) * ln(2)
+        $k = ($m / $n) * log(2);
+        $k = ceil($k); // 向上取整
+
+        // 计算实际误判率 exp(float $num):返回 e 的 num 次方值,用“e”作为自然对数的底数，大约为 2.718282。
+        $actual_p = pow(1 - exp(-$k * $n / $m), $k);
+
+        return [
+            'm' => (int)$m,//计算的位数组大小
+            'k' => (int)$k,//最优哈希函数数量
+            'actual_p' => $actual_p,//实际误判率
+            'bits_per_item' => $m / $n,//每元素占用比特数
+            'n' => $n,//预期元素数量
+            'p' => $p,//可接受误判率
+        ];
+    }
+
+    /**
+     * 生成k个哈希函数
+     * @param int $k 哈希函数数量
+     * @return array 哈希函数数组
+     */
+    public static function generateHashFunctions(int $k)
+    {
+        $hashFunctions = [];
+
+        // 基础哈希函数1：FNV-1a (32位)
+        $fnv1a = function ($item) {
+            $hash = 2166136261; // FNV偏移基础值
+            $len = strlen($item);
+            for ($i = 0; $i < $len; $i++) {
+                $hash ^= ord($item[$i]);
+                $hash = (int)($hash * 16777619);
+            }
+            return $hash;
+        };
+
+        // 基础哈希函数2：MurmurHash变体
+        $murmur = function ($item) {
+            $seed = 0x3f6a2b4c; // 随机种子
+            $len = strlen($item);
+            $hash = $seed ^ $len;
+
+            for ($i = 0; $i < $len; $i++) {
+                $hash ^= ord($item[$i]) << (($i % 4) * 8);
+                $hash = (int)($hash * 0x5bd1e995);
+                $hash ^= $hash >> 15;
+            }
+
+            return $hash;
+        };
+
+        // 生成k个哈希函数
+        for ($i = 0; $i < $k; $i++) {
+            $hashFunctions[] = function ($item) use ($fnv1a, $murmur, $i) {
+                // 使用两个基础哈希函数组合生成多个哈希函数
+                $h1 = $fnv1a($item . $i);
+                $h2 = $murmur($item . ($i * 0x9e3779b9));
+                return abs($h1 ^ $h2);
+            };
+        }
+
+        return $hashFunctions;
     }
 
 }
