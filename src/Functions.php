@@ -108,6 +108,7 @@ if (!function_exists('pushQueue')) {
     function pushQueue($job, $data = '', $channel = null)
     {
         $delay = data_get($job, Constant::QUEUE_DELAY, 0);//延迟时间 单位：秒
+        $queueUnsetKeys = data_get($job, ['queueUnsetKeys']);//要清空的数据
 
         $connection = data_get($job, Constant::QUEUE_CONNECTION);
         $channel = $channel !== null ? $channel : data_get($job, Constant::QUEUE_CHANNEL);
@@ -117,6 +118,15 @@ if (!function_exists('pushQueue')) {
             if ($waitingType !== 'zset') {
                 data_set($job, 'push_time', date('Y-m-d H:i:s'));
             }
+
+            if ($queueUnsetKeys !== null) {
+                foreach ($queueUnsetKeys as $queueUnsetKey) {
+                    if (isset($job[$queueUnsetKey])) {
+                        unset($job[$queueUnsetKey]);
+                    }
+                }
+            }
+
             $data = [
                 Constant::DATA => $job
             ];
