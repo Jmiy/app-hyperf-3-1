@@ -119,6 +119,16 @@ if (!function_exists('pushQueue')) {
                 data_set($job, 'push_time', date('Y-m-d H:i:s'));
             }
 
+            if ($queueUnsetKeys === null && $waitingType === 'zset') {
+                $queueUnsetKeys = [
+                    'queueUnsetKeys',
+                    Constant::RETRY_MAX,
+                    Constant::SLEEP_MIN,
+                    Constant::SLEEP_MAX,
+                    Constant::QUEUE_DELAY
+                ];
+            }
+
             if ($queueUnsetKeys !== null) {
                 foreach ($queueUnsetKeys as $queueUnsetKey) {
                     if (isset($job[$queueUnsetKey])) {
