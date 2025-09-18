@@ -55,11 +55,16 @@ class AuthMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $routeInfo = $request->getAttribute(Dispatched::class);
-        $auth = data_get($routeInfo, ['handler', 'options', 'auth'], true);
+        $auth = data_get($routeInfo, ['handler', 'options', 'auth'], true);//是否进行签名认证 true：是  false：否 默认：true
         $serverName = data_get($routeInfo, ['serverName'], 'http');
-        $protocol = $request->getHeaderLine(BusinessConstant::RPC_PROTOCOL_KEY);
+        $callback = data_get($routeInfo, ['callback']);
+        $protocol = $request->getHeaderLine(BusinessConstant::RPC_PROTOCOL_KEY) ?: $serverName;
         $appName = config('app_name');
         $service = $request->getHeaderLine('x-jmiy-service') ?: $appName;
+
+        if (in_array($callback, config('authorization.' . $service . '.whitelist.controller', []))) {
+            return $handler->handle($request);
+        }
 
         $responseStatusCode = 401;
         $authRs = true;//认证结果 true：通过  false：不通过 默认：true
@@ -75,41 +80,72 @@ class AuthMiddleware implements MiddlewareInterface
         }
         /****************进行ip校验 end   ***************/
 
-        /****************进行签名校验 start ***************/
-        //根据通讯协议获取对应的 token key
-        $tokenKey = 'x-authenticated-open-ai';//api
-        if ($protocol == BusinessConstant::JSON_RPC_HTTP_PROTOCOL) {//微服务
-            $tokenKey = BusinessConstant::RPC_TOKEN_KEY;
-        }
-
-        //优先从请求头获取认证的token
-        $token = $request->getHeaderLine('x-authenticated-open-ai');//认证token
-        if (empty($token)) {
-            $token = $request->getHeaderLine(BusinessConstant::RPC_TOKEN_KEY);//认证token
-        }
-        if (empty($token)) {
+        $clientAuthKey = null;
+        $clientAuthorization = null;
+        $serverAuthorization = null;
+        if (false !== $authRs && true === $auth) {//如果ip限制通过，就进行签名校验
+            /****************进行签名校验 start ***************/
             $requestData = $request->getParsedBody();
-            $token = data_get($requestData, [BusinessConstant::RPC_TOKEN_KEY]);//认证token
+
+            $clientAuthKeys = [
+                'x-authenticated-open-ai',
+                'x-jmiy-authenticated',
+                BusinessConstant::RPC_TOKEN_KEY,
+            ];
+
+            foreach ($clientAuthKeys as $clientAuthKey) {
+                //优先从请求头获取认证的token
+                $clientAuthorization = $request->getHeaderLine($clientAuthKey);//认证token
+                if (empty($clientAuthorization)) {
+                    $clientAuthorization = data_get($requestData, [$clientAuthKey]);//认证token
+                }
+
+                if (null !== $clientAuthorization) {
+                    $serverAuthorization = config('authorization.' . $service . '.' . $clientAuthKey);
+                    break;
+                }
+            }
+
+            //根据通讯协议获取对应的 token key
+            if ($protocol == BusinessConstant::JSON_RPC_HTTP_PROTOCOL) {//微服务
+                $clientAuthKey = BusinessConstant::RPC_TOKEN_KEY;
+
+                //优先从请求头获取认证的token
+                $clientAuthorization = $request->getHeaderLine($clientAuthKey);//认证token
+                if (empty($clientAuthorization)) {
+                    $clientAuthorization = data_get($requestData, [$clientAuthKey]);//认证token
+                }
+                $serverAuthorization = config('authorization.' . $service . '.' . $clientAuthKey);
+            }
+
+            //进行签名校验
+            if ($auth !== false && $clientAuthorization != $serverAuthorization) {
+                $authRs = false;
+            }
+            /****************进行签名校验 end ***************/
         }
 
-        //进行签名校验
-        $authorization = config('authorization.' . $service . '.' . $tokenKey);
-        if ($auth !== false && $token != $authorization) {
-            $authRs = false;
-        }
-        /****************进行签名校验 end ***************/
-
-//        var_dump(__METHOD__, $request->getHeaders(), $tokenKey, $authorization, $token, $clientIp);
+//        loger('debug', 'debug')->debug(
+//            sprintf('[method: %s]', __METHOD__),
+//            [
+//                $routeInfo,
+//                $clientAuthKey,
+//                $clientAuthorization,
+//                $serverAuthorization,
+//                $clientAuthorization != $serverAuthorization
+//            ]
+//        );
 
         //如果认证不通过，就返回认证不通过，并且通过钉钉通知
         if (false === $authRs) {
 
             $error = new BusinessException(
                 $responseStatusCode,
-                $responseReasonPhrase . PHP_EOL . ('-' . $request->getHeaderLine('host'))
+                $responseReasonPhrase
+                . PHP_EOL . ('-' . $request->getHeaderLine('host'))
                 . PHP_EOL . (' -clientIp：' . $clientIp)
-                . PHP_EOL . (' -clientToken：' . $token)
-                . PHP_EOL . (' -' . $tokenKey . '：' . $authorization)
+                . PHP_EOL . (' -clientToken：' . $clientAuthorization)
+                . PHP_EOL . (' -' . $clientAuthKey . '：' . $serverAuthorization)
             );
 
             go(function () use ($error) {
