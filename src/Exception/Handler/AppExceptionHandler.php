@@ -79,14 +79,14 @@ class AppExceptionHandler extends ExceptionHandler
      */
     public function log(Throwable $throwable, $level = 'error', $businessData = [])
     {
-        $this->logger->{$level}(sprintf('%s [%s] in %s', $throwable->getMessage(), $throwable->getLine(), $throwable->getFile()));
-        $this->logger->{$level}('businessData:' . json_encode($businessData, JSON_UNESCAPED_UNICODE));
-        $this->logger->{$level}($throwable->getTraceAsString());
-
-//        if($throwable instanceof BusinessException){
-//            //此处 调刊登接口写入 异常日志
-//            var_dump('业务异常'.get_class($throwable));
-//        }
+        $context = [
+            'businessData' => $businessData,
+            'stackTraces' => $throwable->getTraceAsString(),
+        ];
+        $this->logger->{$level}(sprintf('%s(%s)：[code:%s][message:%s]', $throwable->getFile(), $throwable->getLine(), $throwable->getCode(), $throwable->getMessage()), $context);
+//        $this->logger->{$level}(sprintf('%s [%s] in %s', $throwable->getMessage(), $throwable->getLine(), $throwable->getFile()), $context);
+//        $this->logger->{$level}('businessData:' . json_encode($businessData, JSON_UNESCAPED_UNICODE));
+//        $this->logger->{$level}($throwable->getTraceAsString());
 
         $enableAppExceptionMonitor = config('monitor.enable_app_exception_monitor', false);
         if ($enableAppExceptionMonitor) {//如果开启异常监控，就通过消息队列将异常，发送到相应的钉钉监控群

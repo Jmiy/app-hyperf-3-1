@@ -97,7 +97,14 @@ trait Base
      */
     public static function pack(mixed $data): string|false
     {
-        return json_encode($data, JSON_UNESCAPED_UNICODE);
+        $json = \json_encode($data, JSON_UNESCAPED_UNICODE);
+        if (\JSON_ERROR_NONE !== \json_last_error()) {
+            throw new \InvalidArgumentException('json_encode error: ' . \json_last_error_msg());
+        }
+
+        /** @var string */
+        return $json;
+//        return json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -107,7 +114,14 @@ trait Base
      */
     public static function unpack(mixed $data): mixed
     {
-        return json_decode($data, true);
+        $data = \json_decode($data, true);
+        if (\JSON_ERROR_NONE !== \json_last_error()) {
+            throw new \InvalidArgumentException('json_decode error: ' . \json_last_error_msg());
+        }
+
+        return $data;
+
+//        return json_decode($data, true);
     }
 
     /**
