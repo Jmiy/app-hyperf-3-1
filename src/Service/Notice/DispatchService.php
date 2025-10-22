@@ -10,6 +10,7 @@ use Business\Hyperf\Service\BaseService;
 use function Hyperf\Config\config;
 use function Hyperf\Coroutine\go;
 use function Business\Hyperf\Utils\Collection\data_get;
+use function Hyperf\Support\call;
 
 class DispatchService extends BaseService
 {
@@ -27,21 +28,34 @@ class DispatchService extends BaseService
 
             $job = data_get($extData, ['job']);
             $service = data_get($job, [Constant::SERVICE], static::class);
-            $method = data_get($job, [Constant::METHOD], 'handleDingTalk');
+            $method = data_get($job, [Constant::METHOD], 'dispatchDingTalk');
             $parameters = data_get($job, [Constant::PARAMETERS], []);
 
             return static::push($service, $method, $parameters, $delay, $queueConnection);
         });
     }
 
-    public static function handleDingTalk(string $robot, array $messages)
+    /**
+     * 调度钉钉通知
+     * @param string $robot 钉钉配置
+     * @param string $method 执行通知的函数
+     * @param array $parameters 函数参数
+     * @return void
+     */
+    public static function dispatchDingTalk(string $robot, string $method = 'text', array $parameters = [])
     {
         $dingTalk = ding();
+//        if ($robot !== 'default') {
+//            $dingTalk->with($robot)->text(implode(PHP_EOL, $messages));
+//        } else {
+//            $dingTalk->text(implode(PHP_EOL, $messages));
+//        }
+
         if ($robot !== 'default') {
-            $dingTalk->with($robot)->text(implode(PHP_EOL, $messages));
-        } else {
-            $dingTalk->text(implode(PHP_EOL, $messages));
+            $dingTalk = $dingTalk->with($robot);
         }
+
+        call([$dingTalk, $method], $parameters);
     }
 
 
