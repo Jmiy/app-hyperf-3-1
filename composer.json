@@ -5,17 +5,24 @@
     "minimum-stability": "dev",
     "require": {
         "php": ">=8.0",
-        "hyperf/async-queue": "^3.0.0",
-        "hyperf/constants": "^3.0.0",
-        "hyperf/signal": "^3.0.0",
-        "hyperf/snowflake": "^3.0.0",
-        "hyperf/tracer": "^3.0.0",
-        "hyperf/translation": "^3.0.0",
-        "hyperf/validation": "^3.0.0",
+        "hyperf/async-queue": "^3.1",
+        "hyperf/constants": "^3.1",
+        "hyperf/signal": "^3.1",
+        "hyperf/snowflake": "^3.1",
+        "hyperf/tracer": "^3.1",
+        "hyperf/translation": "^3.1",
+        "hyperf/validation": "^3.1",
         "jmiy/hyperf-ding-notice-3-1": "dev-main",
         "hyperf/grpc": "^3.1",
         "hyperf/grpc-client": "^3.1",
-        "hyperf/grpc-server": "^3.1"
+        "hyperf/grpc-server": "^3.1",
+        "hyperf/rpc": "^3.1",
+        "hyperf/rpc-client": "^3.1",
+        "hyperf/rpc-multiplex": "^3.1",
+        "hyperf/rpc-server": "^3.1",
+        "hyperf/json-rpc": "^3.1",
+        "hyperf/load-balancer": "^3.1",
+        "jmiy/dtm-client": "^1.0@dev"
     },
     "autoload":{
         "psr-4":{
