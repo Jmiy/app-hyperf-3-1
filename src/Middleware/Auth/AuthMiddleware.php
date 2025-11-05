@@ -142,7 +142,7 @@ class AuthMiddleware implements MiddlewareInterface
 
         if (false !== $authRs && true === $auth) {//如果ip限制通过，就进行签名校验
             /****************进行签名校验 start ***************/
-            $requestData = $request->getParsedBody();
+            $requestData = Arr::collapse([$request->getParsedBody(), $request->getQueryParams()]);
 
             if ($serverType == 'rpc' || $protocol == BusinessConstant::JSON_RPC_HTTP_PROTOCOL) {//rpc请求
 
@@ -200,6 +200,7 @@ class AuthMiddleware implements MiddlewareInterface
         $responseReasonPhrase = Arr::collapse([
             [
                 'app: ' . $appName,
+                'appEnv: ' . config('app_env'),
                 'serverName: ' . $serverName,
                 'clientIp: ' . $clientIp,
                 'host：' . $request->getHeaderLine('host'),
