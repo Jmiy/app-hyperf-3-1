@@ -101,8 +101,8 @@ class AuthMiddleware implements MiddlewareInterface
         //rpc请求的上下文 RPC 请求参数请查看：  Hyperf\JsonRpc\TcpServer::buildJsonRpcRequest(int $fd, int $reactorId, array $data)
         $rpcContext = getApplicationContainer()->get(RpcContext::class)->getData();
 
-        //请求的服务
-        $service = $request->getHeaderLine('x-jmiy-service') ?: (data_get($rpcContext, ['x-jmiy-service']) ?: $appName);
+        //客户端请求的应用
+        $clientRequestApp = $request->getHeaderLine('x-jmiy-service') ?: (data_get($rpcContext, ['x-jmiy-service']) ?: $appName);
 
         $serverConfig = [];
         $servers = config('server.servers', []);
@@ -114,8 +114,11 @@ class AuthMiddleware implements MiddlewareInterface
         }
         $serverType = data_get($serverConfig, ['extra', 'serverType']);//服务类型  rpc  http
 
-        //协议
+        //通讯协议
         $protocol = $request->getHeaderLine(BusinessConstant::RPC_PROTOCOL_KEY) ?: (data_get($rpcContext, [BusinessConstant::RPC_PROTOCOL_KEY]) ?: (data_get($serverConfig, ['extra', 'protocol']) ?: $serverName));
+
+        //客户端应用
+        $clientApp = $request->getHeaderLine(BusinessConstant::RPC_APP_KEY) ?: (data_get($rpcContext, [BusinessConstant::RPC_APP_KEY]) ?: '');
 
         $responseStatusCode = 401;
         $authRs = true;//认证结果 true：通过  false：不通过 默认：true
@@ -126,7 +129,7 @@ class AuthMiddleware implements MiddlewareInterface
         ];
 
         /****************进行ip校验 start ***************/
-        $ips = config('authorization.' . $service . '.ip') ?: 'all';
+        $ips = config('authorization.' . $clientRequestApp . '.ip') ?: 'all';
         $_ips = explode(',', $ips);
         $clientIp = getClientIP();
         if ($ips != 'all' && !in_array($clientIp, $_ips)) {
@@ -158,7 +161,7 @@ class AuthMiddleware implements MiddlewareInterface
                     $clientAuthorization = data_get($rpcContext, [$clientAuthKey]);//认证token
 
                 }
-//                $serverAuthorization = config('authorization.' . $service . '.' . $clientAuthKey);
+//                $serverAuthorization = config('authorization.' . $clientRequestApp . '.' . $clientAuthKey);
 
             } else {
 
@@ -187,7 +190,7 @@ class AuthMiddleware implements MiddlewareInterface
             }
 
             if ($clientAuthKey) {
-                $serverAuthorization = config('authorization.' . $service . '.' . $clientAuthKey);
+                $serverAuthorization = config('authorization.' . $clientRequestApp . '.' . $clientAuthKey);
             }
 
             //进行签名校验
@@ -199,16 +202,18 @@ class AuthMiddleware implements MiddlewareInterface
 
         $responseReasonPhrase = Arr::collapse([
             [
-                'app: ' . $appName,
-                'appEnv: ' . config('app_env'),
+                'serverApp: ' . $appName,
+                'serverAppEnv: ' . config('app_env'),
                 'serverName: ' . $serverName,
-                'clientIp: ' . $clientIp,
-                'host：' . $request->getHeaderLine('host'),
+                'serverHost：' . $request->getHeaderLine('host'),
+                'clientApp: ' . $clientApp,//客户端应用
+                'clientIp: ' . $clientIp,//客户端ip
+                'clientRequestApp: ' . $clientRequestApp,//客户端请求的应用
             ],
             $_responseReasonPhrase,
             [
                 'clientToken(' . $clientAuthKey . ')：' . $clientAuthorization,
-                'serverToken(' . $clientAuthKey . '：' . $service . ')：' . $serverAuthorization,
+                'serverToken(' . $clientAuthKey . '：' . $clientRequestApp . ')：' . $serverAuthorization,
             ]
         ]);
 
@@ -429,9 +434,9 @@ class AuthMiddleware implements MiddlewareInterface
 //        $callback = data_get($routeInfo, ['callback']);
 //        $protocol = $request->getHeaderLine(BusinessConstant::RPC_PROTOCOL_KEY) ?: $serverName;
 //        $appName = config('app_name');
-//        $service = $request->getHeaderLine('x-jmiy-service') ?: $appName;
+//        $clientRequestApp = $request->getHeaderLine('x-jmiy-service') ?: $appName;
 //
-//        if (in_array($callback, config('authorization.' . $service . '.whitelist.controller', []))) {
+//        if (in_array($callback, config('authorization.' . $clientRequestApp . '.whitelist.controller', []))) {
 //            return $handler->handle($request);
 //        }
 //
@@ -440,7 +445,7 @@ class AuthMiddleware implements MiddlewareInterface
 //        $responseReasonPhrase = PHP_EOL . $appName . '-Unauthorized-serverName:' . $serverName;
 //
 //        /****************进行ip校验 start ***************/
-//        $ips = config('authorization.' . $service . '.ip') ?: 'all';
+//        $ips = config('authorization.' . $clientRequestApp . '.ip') ?: 'all';
 //        $_ips = explode(',', $ips);
 //        $clientIp = getClientIP();
 //        if ($ips != 'all' && !in_array($clientIp, $_ips)) {
@@ -470,7 +475,7 @@ class AuthMiddleware implements MiddlewareInterface
 //                }
 //
 //                if (null !== $clientAuthorization) {
-//                    $serverAuthorization = config('authorization.' . $service . '.' . $clientAuthKey);
+//                    $serverAuthorization = config('authorization.' . $clientRequestApp . '.' . $clientAuthKey);
 //                    break;
 //                }
 //            }
@@ -484,7 +489,7 @@ class AuthMiddleware implements MiddlewareInterface
 //                if (empty($clientAuthorization)) {
 //                    $clientAuthorization = data_get($requestData, [$clientAuthKey]);//认证token
 //                }
-//                $serverAuthorization = config('authorization.' . $service . '.' . $clientAuthKey);
+//                $serverAuthorization = config('authorization.' . $clientRequestApp . '.' . $clientAuthKey);
 //            }
 //
 //            //进行签名校验
