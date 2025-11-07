@@ -801,7 +801,10 @@ class Constant
     public const JSON_RPC_HEADERS_KEY = 'json-rpc-headers';
     public const RPC_PROTOCOL_KEY = 'x-jmiy-protocol';
     public const RPC_APP_KEY = 'x-jmiy-app';
+    public const RPC_SERVICE_APP_KEY = 'x-jmiy-service';
     public const RPC_TOKEN_KEY = 'x-jmiy-token';
+    public const API_TOKEN_KEY = 'x-jmiy-authenticated';
+    public const API_OPENAI_TOKEN_KEY = 'x-authenticated-open-ai';
     public const RPC_PLATFORM_KEY = 'x-jmiy-platform';
     public const JSON_RPC_HTTP_PROTOCOL = 'jsonrpc-http';
 

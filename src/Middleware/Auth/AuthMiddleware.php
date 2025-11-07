@@ -103,7 +103,7 @@ class AuthMiddleware implements MiddlewareInterface
         $rpcContext = getApplicationContainer()->get(RpcContext::class)->getData();
 
         //客户端请求的应用
-        $clientRequestApp = $request->getHeaderLine('x-jmiy-service') ?: (data_get($rpcContext, ['x-jmiy-service']) ?: $appName);
+        $clientRequestApp = $request->getHeaderLine(BusinessConstant::RPC_SERVICE_APP_KEY) ?: (data_get($rpcContext, [BusinessConstant::RPC_SERVICE_APP_KEY]) ?: $appName);
 
         $serverConfig = [];
         $servers = config('server.servers', []);
@@ -169,8 +169,8 @@ class AuthMiddleware implements MiddlewareInterface
             } else {
 
                 $clientAuthKeys = [
-                    'x-authenticated-open-ai',
-                    'x-jmiy-authenticated',
+                    BusinessConstant::API_OPENAI_TOKEN_KEY,
+                    BusinessConstant::API_TOKEN_KEY,
                     BusinessConstant::RPC_TOKEN_KEY,
                 ];
 
@@ -439,7 +439,7 @@ class AuthMiddleware implements MiddlewareInterface
 //        $callback = data_get($routeInfo, ['callback']);
 //        $protocol = $request->getHeaderLine(BusinessConstant::RPC_PROTOCOL_KEY) ?: $serverName;
 //        $appName = config('app_name');
-//        $clientRequestApp = $request->getHeaderLine('x-jmiy-service') ?: $appName;
+//        $clientRequestApp = $request->getHeaderLine(BusinessConstant::RPC_SERVICE_APP_KEY) ?: $appName;
 //
 //        if (in_array($callback, config('authorization.' . $clientRequestApp . '.whitelist.controller', []))) {
 //            return $handler->handle($request);
