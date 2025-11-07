@@ -88,6 +88,7 @@ class AuthMiddleware implements MiddlewareInterface
         $auth = data_get($routeInfo, ['handler', 'options', 'auth'], true);//是否进行签名认证 true：是  false：否 默认：true
         $serverName = data_get($routeInfo, ['serverName'], 'http');
         $callback = data_get($routeInfo, ['handler', 'callback', 0]);
+        $route = data_get($routeInfo, ['handler', 'route'], '');//客户端请求的uri
         $appName = config('app_name');
 
         //如果请求的是白名单，就跳过签名认证直接执行请求
@@ -113,6 +114,8 @@ class AuthMiddleware implements MiddlewareInterface
             }
         }
         $serverType = data_get($serverConfig, ['extra', 'serverType']);//服务类型  rpc  http
+        $serverAuth = data_get($serverConfig, ['extra', 'authConfig', 'auth']);//服务端是否开启认证 true：是  false：否
+        $serverAuthTokenKey = data_get($serverConfig, ['extra', 'authConfig', 'authTokenKey']);//服务端默认认证的key
 
         //通讯协议
         $protocol = $request->getHeaderLine(BusinessConstant::RPC_PROTOCOL_KEY) ?: (data_get($rpcContext, [BusinessConstant::RPC_PROTOCOL_KEY]) ?: (data_get($serverConfig, ['extra', 'protocol']) ?: $serverName));
@@ -184,9 +187,10 @@ class AuthMiddleware implements MiddlewareInterface
                     }
                 }
 
-//                if ($clientAuthKey === null) {
-//                    $clientAuthKey = 'x-jmiy-authenticated';
-//                }
+                //如果客户端没有传认证的token并且服务端开启认证，就设置认证的key为：$serverAuthTokenKey
+                if ($clientAuthKey === null && true === $serverAuth) {
+                    $clientAuthKey = $serverAuthTokenKey;
+                }
             }
 
             if ($clientAuthKey) {
@@ -209,6 +213,7 @@ class AuthMiddleware implements MiddlewareInterface
                 'clientApp: ' . $clientApp,//客户端应用
                 'clientIp: ' . $clientIp,//客户端ip
                 'clientRequestApp: ' . $clientRequestApp,//客户端请求的应用
+                'clientRequestUri: ' . $route,//客户端请求的uri
             ],
             $_responseReasonPhrase,
             [
