@@ -61,11 +61,20 @@ class BaseConsumer
     public static function getInstance()
     {
         if (empty(static::$instance[static::$serviceName][static::$protocol])) {
-            static::$instance[static::$serviceName][static::$protocol] = new BaseServiceClient(
-                getApplicationContainer(),
-                static::$serviceName,
-                static::$protocol,
-                static::$loadBalancer
+//            static::$instance[static::$serviceName][static::$protocol] = new BaseServiceClient(
+//                getApplicationContainer(),
+//                static::$serviceName,
+//                static::$protocol,
+//                static::$loadBalancer
+//            );
+            static::$instance[static::$serviceName][static::$protocol] = make(
+                BaseServiceClient::class,
+                [
+                    getApplicationContainer(),
+                    static::$serviceName,
+                    static::$protocol,
+                    static::$loadBalancer
+                ]
             );
         }
 

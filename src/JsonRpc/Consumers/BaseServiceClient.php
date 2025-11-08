@@ -31,22 +31,24 @@ class BaseServiceClient extends AbstractServiceClient
 
     public function __request(string $method, array $params, ?string $id = null)
     {
-        if (!$id && $this->idGenerator instanceof IdGeneratorInterface) {
-            $id = $this->idGenerator->generate();
-        }
-        $response = $this->client->send($this->__generateData($method, $params, $id));
-//        var_dump(__METHOD__, $response);
-        if (is_array($response)) {
-            $response = $this->checkRequestIdAndTryAgain($response, $id);
+        return parent::__request($method, $params, $id);
 
-            if (array_key_exists('result', $response)) {
-                return $response['result'];
-            }
-            if (array_key_exists('error', $response)) {
-                return $response['error'];
-            }
-        }
-        throw new RequestException('Invalid response.');
+//        if (!$id && $this->idGenerator instanceof IdGeneratorInterface) {
+//            $id = $this->idGenerator->generate();
+//        }
+//        $response = $this->client->send($this->__generateData($method, $params, $id));
+////        var_dump(__METHOD__, $response);
+//        if (is_array($response)) {
+//            $response = $this->checkRequestIdAndTryAgain($response, $id);
+//
+//            if (array_key_exists('result', $response)) {
+//                return $response['result'];
+//            }
+//            if (array_key_exists('error', $response)) {
+//                return $response['error'];
+//            }
+//        }
+//        throw new RequestException('Invalid response.');
     }
 }
 
