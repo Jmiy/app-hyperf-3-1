@@ -44,16 +44,12 @@ class DispatchService extends BaseService
      */
     public static function dispatchDingTalk(string $robot, string $method = 'text', array $parameters = [])
     {
-        $dingTalk = ding();
+//        $dingTalk = ding();
 //        if ($robot !== 'default') {
-//            $dingTalk->with($robot)->text(implode(PHP_EOL, $messages));
-//        } else {
-//            $dingTalk->text(implode(PHP_EOL, $messages));
+//            $dingTalk = $dingTalk->with($robot);
 //        }
 
-        if ($robot !== 'default') {
-            $dingTalk = $dingTalk->with($robot);
-        }
+        $dingTalk = ding()->with($robot);
 
         call([$dingTalk, $method], $parameters);
     }
