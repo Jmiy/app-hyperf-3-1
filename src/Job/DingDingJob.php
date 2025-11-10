@@ -130,12 +130,13 @@ class DingDingJob extends Job
 
         $dingCodeData = explode(',', config('ding.' . $this->robot . '.code', ''));
         if (in_array('all', $dingCodeData) || in_array($this->code, $dingCodeData)) {
-            $dingTalk = ding();
-            if ($this->robot !== 'default') {
-                $dingTalk->with($this->robot)->text(implode(PHP_EOL, $messages));
-            } else {
-                $dingTalk->text(implode(PHP_EOL, $messages));
-            }
+//            $dingTalk = ding();
+//            if ($this->robot !== 'default') {
+//                $dingTalk->with($this->robot)->text(implode(PHP_EOL, $messages));
+//            } else {
+//                $dingTalk->text(implode(PHP_EOL, $messages));
+//            }
+            ding()->with($this->robot)->text(implode(PHP_EOL, $messages));
         }
     }
 
