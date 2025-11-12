@@ -12,6 +12,7 @@ declare(strict_types=1);
  */
 
 use Hyperf\Support\Network;
+use Swoole\Server;
 use function Hyperf\Collection\data_set;
 use function Hyperf\Support\make;
 use function Business\Hyperf\Utils\Collection\data_get;
@@ -36,6 +37,7 @@ use Psr\Http\Message\ServerRequestInterface;
 use Hyperf\Contract\TranslatorInterface;
 use Hyperf\Validation\Contract\ValidatorFactoryInterface;
 use Psr\Log\LoggerInterface;
+use Hyperf\Context\RequestContext;
 
 if (!function_exists('getApplicationContainer')) {
     /**
@@ -311,19 +313,26 @@ if (!function_exists('isValidIp')) {
 }
 
 if (!function_exists('getClientIP')) {
+
     /**
      * Get the client IP address.
-     *
-     * @return client IP address
+     * @param $ip
+     * @param $request
+     * @return mixed|string
+     * @throws \Psr\Container\ContainerExceptionInterface
+     * @throws \Psr\Container\NotFoundExceptionInterface
      */
-    function getClientIP($ip = null)
+    function getClientIP($ip = null, $request = null)
     {
         if (!empty($ip)) {
             return $ip;
         }
 
-        if (!Context::has('http.request.ipData')) {
-            $remotes_keys = [
+        $ipContextKey = 'request.clientIpData';
+
+        if (!Context::has($ipContextKey)) {
+
+            $remotesKeys = [
                 'HTTP_X_FORWARDED_FOR',
                 'HTTP_CLIENT_IP',
                 'HTTP_X_FORWARDED',
@@ -346,12 +355,19 @@ if (!function_exists('getClientIP')) {
                 'x-cluster-client-ip',
             ];
 
-            $clientIP = '';
-            $request = Context::get(ServerRequestInterface::class);
+            $clientIp = '';
+//            $request = $request === null ? Context::get(ServerRequestInterface::class) : $request;
+            $request = $request === null ? RequestContext::get() : $request;
+
+            if (empty($request)) {
+                Context::set($ipContextKey, $clientIp);
+                return $clientIp;
+            }
+
             $requestHeaders = $request->getHeaders();
             //var_dump(__METHOD__, $requestHeaders);
-            foreach ($remotes_keys as $key) {
-                $address = data_get($requestHeaders, strtolower($key));
+            foreach ($remotesKeys as $key) {
+                $address = data_get($requestHeaders, [strtolower($key)]);
                 if (empty($address)) {
                     continue;
                 }
@@ -360,36 +376,57 @@ if (!function_exists('getClientIP')) {
 
                 foreach ($address as $_address) {
                     $ipData = explode(',', $_address);
-                    foreach ($ipData as $_clientIP) {
-                        if (isValidIp($_clientIP)) {
-                            return $_clientIP;
+                    foreach ($ipData as $clientIp) {
+                        if (isValidIp($clientIp)) {
+                            Context::set($ipContextKey, $clientIp);
+                            return $clientIp;
                         }
                     }
                 }
             }
 
-            if (empty($clientIP)) {
-                $requestServer = $request->getServerParams();
-                $address = data_get($requestServer, 'remote_addr');
-                if ($address) {
-                    $address = is_array($address) ? $address : [$address];
+            $requestServer = $request->getServerParams();
+            $address = data_get($requestServer, ['remote_addr']);
+            if ($address) {
+                $address = is_array($address) ? $address : [$address];
 
-                    foreach ($address as $_address) {
-                        $ipData = explode(',', $_address);
-                        foreach ($ipData as $clientIP) {
-                            if (isValidIp($clientIP)) {
-                                return $clientIP;
-                            }
+                foreach ($address as $_address) {
+                    $ipData = explode(',', $_address);
+                    foreach ($ipData as $clientIp) {
+                        if (isValidIp($clientIp)) {
+                            Context::set($ipContextKey, $clientIp);
+                            return $clientIp;
                         }
                     }
                 }
             }
 
+            //获取rpc请求方式的客户端ip
+            $server = ApplicationContext::getContainer()->get(Server::class);
+            if (empty($server)) {
+                Context::set($ipContextKey, $clientIp);
+                return $clientIp;
+            }
 
-            return Context::set('http.request.ipData', $clientIP);
+            $fd = $request->getAttribute('fd');
+            if (empty($fd)) {
+                Context::set($ipContextKey, $clientIp);
+                return $clientIp;
+            }
+            $reactorId = $request->getAttribute('fromId', -1);
+
+            $clientInfo = $server->getClientInfo($fd, $reactorId);
+            $clientIp = $clientInfo['remote_ip'] ?? '';
+            if (isValidIp($clientIp)) {
+                Context::set($ipContextKey, $clientIp);
+                return $clientIp;
+            }
+
+            Context::set($ipContextKey, $clientIp);
+            return $clientIp;
         }
 
-        return Context::get('http.request.ipData');
+        return Context::get($ipContextKey);
 
     }
 }

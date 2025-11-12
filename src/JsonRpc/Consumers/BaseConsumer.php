@@ -121,8 +121,15 @@ class BaseConsumer
         $contextHeaders = Arr::collapse([
             $contextHeaders,
             $context,
+            [
+                BusinessConstant::RPC_PROTOCOL_KEY => static::$protocol,
+                BusinessConstant::RPC_APP_KEY => config('app_name'),
+            ]
         ]);
-        $contextHeaders[BusinessConstant::RPC_PROTOCOL_KEY] = static::$protocol;
+
+//        $contextHeaders[BusinessConstant::RPC_PROTOCOL_KEY] = static::$protocol;
+//        $contextHeaders[BusinessConstant::RPC_APP_KEY] = config('app_name');
+
         Context::set(BusinessConstant::JSON_RPC_HEADERS_KEY, $contextHeaders);
 
         $rpcContext = getApplicationContainer()->get(RpcContext::class)->getData();

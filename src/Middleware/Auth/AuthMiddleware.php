@@ -116,6 +116,8 @@ class AuthMiddleware implements MiddlewareInterface
         $serverType = data_get($serverConfig, ['extra', 'serverType']);//服务类型  rpc  http
         $serverAuth = data_get($serverConfig, ['extra', 'authConfig', 'auth']);//服务端是否开启认证 true：是  false：否
         $serverAuthTokenKey = data_get($serverConfig, ['extra', 'authConfig', 'authTokenKey']);//服务端默认认证的key
+        $serverPost = data_get($serverConfig, ['port']);//服务端监听的端口号
+        $serverIp = getInternalIp();//服务器ip
 
         //通讯协议
         $protocol = $request->getHeaderLine(BusinessConstant::RPC_PROTOCOL_KEY) ?: (data_get($rpcContext, [BusinessConstant::RPC_PROTOCOL_KEY]) ?: (data_get($serverConfig, ['extra', 'protocol']) ?: $serverName));
@@ -134,7 +136,7 @@ class AuthMiddleware implements MiddlewareInterface
         /****************进行ip校验 start ***************/
         $ips = config('authorization.' . $clientRequestApp . '.ip') ?: 'all';
         $_ips = explode(',', $ips);
-        $clientIp = getClientIP();
+        $clientIp = getClientIP(null, $request);
         if ($ips != 'all' && !in_array($clientIp, $_ips)) {
             $_responseReasonPhrase[] = 'msgType: ip';
             $authRs = false;
@@ -210,6 +212,8 @@ class AuthMiddleware implements MiddlewareInterface
                 'serverAppEnv: ' . config('app_env'),
                 'serverName: ' . $serverName,
                 'serverHost：' . $request->getHeaderLine('host'),
+                'serverIp：' . $serverIp,
+                'serverPost：' . $serverPost,
                 'clientApp: ' . $clientApp,//客户端应用
                 'clientIp: ' . $clientIp,//客户端ip
                 'clientRequestApp: ' . $clientRequestApp,//客户端请求的应用
