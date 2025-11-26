@@ -7,12 +7,16 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Job;
 
+use Business\Hyperf\Utils\Support\Facades\QueueRedisDriver;
+use Business\Hyperf\Utils\Support\Facades\Redis;
+use Hyperf\Collection\Arr;
 use function Business\Hyperf\Utils\Collection\data_get;
 use function Hyperf\Config\config;
 use Business\Hyperf\Constants\Constant;
 use Business\Hyperf\Service\Log\LogService;
 use Carbon\Carbon;
 use Business\Hyperf\Exception\Handler\AppExceptionHandler as ExceptionHandler;
+use function Hyperf\Coroutine\go;
 
 class DingDingJob extends Job
 {
@@ -128,15 +132,43 @@ class DingDingJob extends Job
 
         LogService::insertData('Log', [data_get($this->trace, Constant::DB_COLUMN_PLATFORM, ''), date('Ymd')], $data);
 
-        $dingCodeData = explode(',', config('ding.' . $this->robot . '.code', ''));
+        $dingConfig = Arr::collapse(
+            [
+                config('ding.' . $this->robot, []),
+                config('ding.' . $this->robot . '-' . $this->code, []),
+            ]
+        );
+
+        $dingCodeData = explode(',', data_get($dingConfig, ['code'], ''));
         if (in_array('all', $dingCodeData) || in_array($this->code, $dingCodeData)) {
-//            $dingTalk = ding();
-//            if ($this->robot !== 'default') {
-//                $dingTalk->with($this->robot)->text(implode(PHP_EOL, $messages));
-//            } else {
-//                $dingTalk->text(implode(PHP_EOL, $messages));
-//            }
-            ding()->with($this->robot)->text(implode(PHP_EOL, $messages));
+
+            $nx = true;
+            $poolName = data_get($dingConfig, ['poolName'], 'default');
+            $ex = data_get($dingConfig, ['lockEx'], 3600);
+
+            $lockKeys = [md5(json_encode($data, JSON_UNESCAPED_UNICODE))];
+
+            $distributedLockKey = QueueRedisDriver::getKey(
+                ['ding'],
+                [$this->code],
+                $lockKeys
+            );
+            try {
+                $redis = Redis::getRedis($poolName);
+
+                //获取分布式锁
+                $nx = $redis->set($distributedLockKey, 1, ['nx', 'ex' => $ex]);// Will set the key, if it doesn't exist, with a ttl of 10 seconds
+//            //释放分布式锁
+//            $rs = $redis->del($distributedLockKey);
+            } catch (\Throwable $exception) {
+//                go(function () use ($throwable) {
+//                    throw $throwable;
+//                });
+            }
+
+            if ($nx == true) {
+                ding()->with($this->robot)->text(implode(PHP_EOL, $messages));
+            }
         }
     }
 
