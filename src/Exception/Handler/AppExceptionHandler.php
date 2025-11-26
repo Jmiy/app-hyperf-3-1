@@ -84,9 +84,6 @@ class AppExceptionHandler extends ExceptionHandler
             'stackTraces' => $throwable->getTraceAsString(),
         ];
         $this->logger->{$level}(sprintf('%s(%s)：[code:%s][message:%s]', $throwable->getFile(), $throwable->getLine(), $throwable->getCode(), $throwable->getMessage()), $context);
-//        $this->logger->{$level}(sprintf('%s [%s] in %s', $throwable->getMessage(), $throwable->getLine(), $throwable->getFile()), $context);
-//        $this->logger->{$level}('businessData:' . json_encode($businessData, JSON_UNESCAPED_UNICODE));
-//        $this->logger->{$level}($throwable->getTraceAsString());
 
         $enableAppExceptionMonitor = config('monitor.enable_app_exception_monitor', false);
         if ($enableAppExceptionMonitor) {//如果开启异常监控，就通过消息队列将异常，发送到相应的钉钉监控群
@@ -101,6 +98,7 @@ class AppExceptionHandler extends ExceptionHandler
                 $robot = 'default';
                 $simple = false;
                 $isQueue = true;
+                $delay = null;
                 $parameters = [
                     $exceptionName,
                     $message,
@@ -111,6 +109,7 @@ class AppExceptionHandler extends ExceptionHandler
                     $robot,
                     $simple,
                     $isQueue,
+                    $delay,
                 ];
                 Contract::handle('Ali', 'Ding', 'report', $parameters);
 

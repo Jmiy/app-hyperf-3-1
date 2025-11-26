@@ -19,23 +19,37 @@ class Ding
 
     /**
      * 配置
-     * @param string $exceptionName 错误的标题
-     * @param string $message 错误的信息
-     * @param string $code 错误的code
-     * @param string $file 错误的文件
-     * @param string $line 错误的位置
-     * @param string $trace 错误的跟踪
+     * @param mixed $exceptionName 错误的标题
+     * @param mixed $message 错误的信息
+     * @param mixed $code 错误的code
+     * @param mixed $file 错误的文件
+     * @param mixed $line 错误的位置
+     * @param mixed $trace 错误的跟踪
+     */
+    /**
+     * @param mixed $exceptionName 错误的标题
+     * @param mixed $message 错误的信息
+     * @param mixed $code 错误的code
+     * @param mixed $file 错误的文件
+     * @param mixed $line 错误的位置
+     * @param mixed $trace 错误的跟踪
+     * @param mixed $robot 机器人配置
+     * @param bool|null $simple 是否简述 true:是  false:否  默认：false
+     * @param bool|null $isQueue 是否压入消息队列发送 true:是  false:否  默认：true
+     * @param int|null $delay 延迟消费时长  默认：null(0-10秒随机)
+     * @return bool|null
      */
     public static function report(
-        $exceptionName,
-        $message,
-        $code,
-        $file = '',
-        $line = '',
-        $trace = '',
-        $robot = 'default',
+        mixed $exceptionName,
+        mixed $message,
+        mixed $code,
+        mixed $file = '',
+        mixed $line = '',
+        mixed $trace = '',
+        mixed $robot = 'default',
         ?bool $simple = false,
-        ?bool $isQueue = true
+        ?bool $isQueue = true,
+        ?int  $delay = null
     )
     {
 
@@ -69,8 +83,9 @@ class Ding
             $robot,
             $simple
         );
+        $delay = $delay === null ? rand(0, 10) : $delay;
         if ($isQueue) {
-            return Queue::push($dingDingJob);
+            return Queue::push($dingDingJob, null, $delay);
         }
 
         return $dingDingJob->handle();
