@@ -52,7 +52,6 @@ class Ding
         ?int  $delay = null
     )
     {
-
 //        $request = ApplicationContext::getContainer()->get(RequestInterface::class);
 //        try {
 //            $requestData = $request->all();
