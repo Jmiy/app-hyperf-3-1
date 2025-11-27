@@ -11,6 +11,7 @@ class Queue
 {
 
     /**
+     * public static function connection($queue = null): DriverInterface
      * @param mixed|null $queue 消息队列配置名称 默认：null(使用默认消息队列：default)
      * @return DriverInterface
      */
@@ -20,7 +21,7 @@ class Queue
     }
 
     /**
-     * 生产消息
+     * 生产消息 public static function push($job, $data = null, int $delay = 0, $connection = null, $channel = null): bool
      * @param mixed $job job对象|类
      * @param mixed|null $data job类 参数
      * @param int $delay 延时执行时间 (单位：秒)
