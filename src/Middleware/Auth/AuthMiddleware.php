@@ -208,12 +208,12 @@ class AuthMiddleware implements MiddlewareInterface
 
         $responseReasonPhrase = Arr::collapse([
             [
-                'serverApp: ' . $appName,
-                'serverAppEnv: ' . config('app_env'),
-                'serverName: ' . $serverName,
                 'serverHost：' . $request->getHeaderLine('host'),
                 'serverIp：' . $serverIp,
                 'serverPost：' . $serverPost,
+                'serverName: ' . $serverName,
+                'serverApp: ' . $appName,
+                'serverAppEnv: ' . config('app_env'),
                 'clientApp: ' . $clientApp,//客户端应用
                 'clientIp: ' . $clientIp,//客户端ip
                 'clientRequestApp: ' . $clientRequestApp,//客户端请求的应用

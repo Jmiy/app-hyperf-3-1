@@ -98,24 +98,34 @@ class DingDingJob extends Job
      */
     public function handle()
     {
-        $messages = [
-            'Time:' . Carbon::now()->toDateTimeString(),
-            'Url:' . $this->url,
-            'Exception:' . $this->exception,
-            'Message:' . $this->message,
-        ];
+        $serverIp = data_get($this->trace, ['serverIp'], '');//服务器ip
 
-        if ($this->code) {
-            $messages = [
-                'Time:' . Carbon::now()->toDateTimeString(),
-                'Url:' . $this->url,
-                'Exception:' . $this->exception,
-                'File：' . $this->file,
-                'Line：' . $this->line,
-                'Code：' . $this->code,
-                'Message:' . $this->message,
-                $this->simple ? '' : ('Exception Trace:' . (is_array($this->trace) ? json_encode($this->trace, JSON_UNESCAPED_UNICODE) : $this->trace)),
-            ];
+        $messages = [];
+        foreach ($this->trace as $key => $value) {
+            if ($key == 'break') {
+                break;
+            }
+            $messages[] = implode(':', [$key . ':' . $value]);
+        }
+
+//        $messages = [
+//            'time:' . $time,
+//            'Exception:' . $this->exception,
+//            'serverHost：' . $serverHost,
+//            'serverIp：' . $serverIp,
+//            'serverPost：' . $serverPost,
+//            'serverName: ' . $serverName,
+//            'serverApp: ' . config('app_name'),
+//            'serverAppEnv: ' . config('app_env'),
+//            'Url:' . $url,
+//            'File：' . $this->file,
+//            'Line：' . $this->line,
+//            'Code：' . $this->code,
+//            'Message:' . $this->message,
+//        ];
+
+        if ($this->code && !$this->simple) {
+            $messages[] = 'stackTrace:' . (is_array($this->trace) ? json_encode($this->trace, JSON_UNESCAPED_UNICODE) : $this->trace);
         }
 
         $data = [
@@ -123,11 +133,11 @@ class DingDingJob extends Job
             'message' => $this->message,
             'file' => $this->file,
             'line' => $this->line,
-            'business_data' => json_encode(data_get($this->trace, 'business_data', []), JSON_UNESCAPED_UNICODE),
-            'stack_trace' => data_get($this->trace, 'stack_trace', ''),
-            'server_ip' => data_get($this->trace, 'server_ip', ''),
+            'business_data' => json_encode(data_get($this->trace, 'context', []), JSON_UNESCAPED_UNICODE),
+            'stack_trace' => data_get($this->trace, 'stackTrace', ''),
+            'server_ip' => data_get($this->trace, ['serverIp'], ''),//服务器ip
             'level' => data_get($this->trace, 'level', ''),
-            'client_ip' => data_get($this->trace, 'client_ip', ''),
+            'client_ip' => data_get($this->trace, 'clientIp', ''),
         ];
 
         LogService::insertData('Log', [data_get($this->trace, Constant::DB_COLUMN_PLATFORM, ''), date('Ymd')], $data);
@@ -145,7 +155,7 @@ class DingDingJob extends Job
             $nx = true;
             $poolName = data_get($dingConfig, ['poolName'], 'default');
             $ex = data_get($dingConfig, ['lockEx'], 3600);
-
+            unset($data['business_data'], $data['stack_trace'], $data['client_ip']);
             $lockKeys = [md5(json_encode($data, JSON_UNESCAPED_UNICODE))];
 
             $distributedLockKey = QueueRedisDriver::getKey(

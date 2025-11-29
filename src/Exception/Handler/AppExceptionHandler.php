@@ -26,6 +26,9 @@ use Psr\Http\Message\ResponseInterface;
 use Throwable;
 use Business\Hyperf\Utils\Response;
 use Business\Hyperf\Utils\Monitor\Contract;
+use Hyperf\Context\RequestContext;
+use Hyperf\HttpServer\Router\Dispatched;
+use Carbon\Carbon;
 
 class AppExceptionHandler extends ExceptionHandler
 {
@@ -58,18 +61,54 @@ class AppExceptionHandler extends ExceptionHandler
             }
         }
 
+        $serverName = '';
+        $serverPost = '';
+        $serverHost = '';
+        $url = '';
+        $requestData = [];
+
+        $request = RequestContext::get();
+        if (!empty($request)) {
+            $routeInfo = $request->getAttribute(Dispatched::class);
+            $serverName = data_get($routeInfo, ['serverName'], 'http');
+            $serverHost = $request->getHeaderLine('host');
+
+            $route = data_get($routeInfo, ['handler', 'route'], '');//客户端请求的uri
+            $url = $serverHost . $route;
+            $requestData = Arr::collapse([$request->getQueryParams(), $request->getParsedBody()]);
+            $serverConfig = [];
+            $servers = config('server.servers', []);
+            foreach ($servers as $_server) {
+                if ($_server['name'] === $serverName) {
+                    $serverConfig = $_server;
+                    break;
+                }
+            }
+            $serverPost = data_get($serverConfig, ['port']);//服务端监听的端口号
+        }
+
         return [
+            'time' => Carbon::now()->toDateTimeString(),
+            'Exception' => '[系统异常:' . $level . ']',
+            'clientIp' => getClientIP(),
+            'serverHost' => $serverHost,
+            'serverIp' => getInternalIp(),//服务器ip
+            'serverPost' => $serverPost,
+            'serverName' => $serverName,
+            'serverApp: ' . config('app_name'),
+            'serverAppEnv: ' . config('app_env'),
+            'url' => $url,
+            Constant::UPLOAD_FILE_KEY => $throwable->getFile(),
+            'line' => $throwable->getLine(),
             Constant::CODE => $throwable->getCode(),
             Constant::EXCEPTION_MSG => $throwable->getMessage(),
             Constant::DB_COLUMN_TYPE => get_class($throwable),
-            Constant::UPLOAD_FILE_KEY => $throwable->getFile(),
-            'line' => $throwable->getLine(),
-            'business_data' => $businessData,//关联数据
-            'stack_trace' => $stackTrace,
-            'server_ip' => getInternalIp(),//服务器ip
-            'http_code' => $throwable->getCode() ? $throwable->getCode() : -101,
             'level' => $level,
             Constant::DB_COLUMN_PLATFORM => $platform,
+            'break' => '',
+            'stackTrace' => $stackTrace,
+            'http_code' => $throwable->getCode() ? $throwable->getCode() : -101,
+            'context' => Arr::collapse([$requestData, $businessData]),//关联数据
         ];
     }
 
@@ -89,23 +128,23 @@ class AppExceptionHandler extends ExceptionHandler
         if ($enableAppExceptionMonitor) {//如果开启异常监控，就通过消息队列将异常，发送到相应的钉钉监控群
             try {
 
-                $exceptionData = static::getMessage($throwable, $businessData, $level);
+                $messageData = static::getMessage($throwable, $businessData, $level);
 
                 //添加系统异常监控
-                $exceptionName = '[系统异常:' . $level . '] 服务器ip-->' . getInternalIp();
-                $message = data_get($exceptionData, 'message', '');
-                $code = data_get($exceptionData, 'code', -101);
+                $exceptionName = '[系统异常:' . $level . ']';
+                $message = data_get($messageData, [Constant::EXCEPTION_MSG], '');
+                $code = data_get($messageData, [Constant::CODE], -101);
                 $robot = 'default';
-                $simple = false;
-                $isQueue = true;
-                $delay = null;
+                $simple = config('monitor.simple', false);//是否简单预警 true：是  false：否  默认：false
+                $isQueue = config('monitor.isQueue', true);//是否压入队列 true：是  false：否  默认：true
+                $delay = config('monitor.delay', null);//延迟执行时间  null：0-10随机 非null：对应延迟执行秒数 默认：null
                 $parameters = [
                     $exceptionName,
                     $message,
                     $code,
-                    data_get($exceptionData, 'file'),
-                    data_get($exceptionData, 'line'),
-                    $exceptionData,
+                    data_get($messageData, ['file']),
+                    data_get($messageData, ['line']),
+                    $messageData,
                     $robot,
                     $simple,
                     $isQueue,

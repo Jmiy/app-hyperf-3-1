@@ -5,7 +5,7 @@ namespace Business\Hyperf\Utils\Monitor\Ali\Dings;
 use Hyperf\Collection\Arr;
 use Business\Hyperf\Utils\Support\Facades\Queue;
 use Business\Hyperf\Job\DingDingJob;
-use Hyperf\Utils\ApplicationContext;
+use Hyperf\Context\ApplicationContext;
 use Hyperf\HttpServer\Contract\RequestInterface;
 
 /*
@@ -16,17 +16,8 @@ use Hyperf\HttpServer\Contract\RequestInterface;
 
 class Ding
 {
-
     /**
-     * 配置
-     * @param mixed $exceptionName 错误的标题
-     * @param mixed $message 错误的信息
-     * @param mixed $code 错误的code
-     * @param mixed $file 错误的文件
-     * @param mixed $line 错误的位置
-     * @param mixed $trace 错误的跟踪
-     */
-    /**
+     * 推送预警
      * @param mixed $exceptionName 错误的标题
      * @param mixed $message 错误的信息
      * @param mixed $code 错误的code
@@ -61,15 +52,8 @@ class Ding
 //            $url = '';
 //        }
 
-        $requestData = [];
         $url = '';
-
-        $trace = Arr::collapse([
-            [
-                'requestData' => $requestData,
-            ],
-            (is_array($trace) ? $trace : [$trace])
-        ]);
+        $trace = is_array($trace) ? $trace : [$trace];
 
         $dingDingJob = new DingDingJob(
             $url,
