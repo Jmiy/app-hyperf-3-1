@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Exception\Handler;
 
+use Hyperf\Collection\Arr;
 use function Business\Hyperf\Utils\Collection\data_get;
 use function Hyperf\Config\config;
 use Business\Hyperf\Constants\Constant;
@@ -75,7 +76,7 @@ class AppExceptionHandler extends ExceptionHandler
 
             $route = data_get($routeInfo, ['handler', 'route'], '');//客户端请求的uri
             $url = $serverHost . $route;
-            $requestData = Arr::collapse([$request->getQueryParams(), $request->getParsedBody()]);
+
             $serverConfig = [];
             $servers = config('server.servers', []);
             foreach ($servers as $_server) {
@@ -85,7 +86,11 @@ class AppExceptionHandler extends ExceptionHandler
                 }
             }
             $serverPost = data_get($serverConfig, ['port']);//服务端监听的端口号
+
+            $requestData = Arr::collapse([$request->getQueryParams(), $request->getParsedBody()]);
         }
+
+        $context = Arr::collapse([$requestData, $businessData]);//关联数据
 
         return [
             'time' => Carbon::now()->toDateTimeString(),
@@ -95,8 +100,8 @@ class AppExceptionHandler extends ExceptionHandler
             'serverIp' => getInternalIp(),//服务器ip
             'serverPost' => $serverPost,
             'serverName' => $serverName,
-            'serverApp: ' . config('app_name'),
-            'serverAppEnv: ' . config('app_env'),
+            'serverApp' => config('app_name'),
+            'serverAppEnv' => config('app_env'),
             'url' => $url,
             Constant::UPLOAD_FILE_KEY => $throwable->getFile(),
             'line' => $throwable->getLine(),
@@ -108,7 +113,7 @@ class AppExceptionHandler extends ExceptionHandler
             'break' => '',
             'stackTrace' => $stackTrace,
             'http_code' => $throwable->getCode() ? $throwable->getCode() : -101,
-            'context' => Arr::collapse([$requestData, $businessData]),//关联数据
+            'context' => $context,//关联数据
         ];
     }
 

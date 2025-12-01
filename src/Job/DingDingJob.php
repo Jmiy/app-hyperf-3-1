@@ -98,34 +98,16 @@ class DingDingJob extends Job
      */
     public function handle()
     {
-        $serverIp = data_get($this->trace, ['serverIp'], '');//服务器ip
-
         $messages = [];
         foreach ($this->trace as $key => $value) {
             if ($key == 'break') {
                 break;
             }
-            $messages[] = implode(':', [$key . ':' . $value]);
+            $messages[] = implode(':', [$key, $value]);
         }
 
-//        $messages = [
-//            'time:' . $time,
-//            'Exception:' . $this->exception,
-//            'serverHost：' . $serverHost,
-//            'serverIp：' . $serverIp,
-//            'serverPost：' . $serverPost,
-//            'serverName: ' . $serverName,
-//            'serverApp: ' . config('app_name'),
-//            'serverAppEnv: ' . config('app_env'),
-//            'Url:' . $url,
-//            'File：' . $this->file,
-//            'Line：' . $this->line,
-//            'Code：' . $this->code,
-//            'Message:' . $this->message,
-//        ];
-
         if ($this->code && !$this->simple) {
-            $messages[] = 'stackTrace:' . (is_array($this->trace) ? json_encode($this->trace, JSON_UNESCAPED_UNICODE) : $this->trace);
+            $messages[] = implode(':', ['stackTrace', (is_array($this->trace) ? json_encode($this->trace, JSON_UNESCAPED_UNICODE) : $this->trace)]);;
         }
 
         $data = [
@@ -133,14 +115,17 @@ class DingDingJob extends Job
             'message' => $this->message,
             'file' => $this->file,
             'line' => $this->line,
-            'business_data' => json_encode(data_get($this->trace, 'context', []), JSON_UNESCAPED_UNICODE),
+            'business_data' => json_encode($this->trace, JSON_UNESCAPED_UNICODE),
             'stack_trace' => data_get($this->trace, 'stackTrace', ''),
             'server_ip' => data_get($this->trace, ['serverIp'], ''),//服务器ip
             'level' => data_get($this->trace, 'level', ''),
             'client_ip' => data_get($this->trace, 'clientIp', ''),
         ];
 
-        LogService::insertData('Log', [data_get($this->trace, Constant::DB_COLUMN_PLATFORM, ''), date('Ymd')], $data);
+        $isInsertDb = config('monitor.isInsertDb', true);//是否记录到数据库 true：是  false：否  默认：true
+        if ($isInsertDb) {
+            LogService::insertData('Log', [data_get($this->trace, Constant::DB_COLUMN_PLATFORM, ''), date('Ymd')], $data);
+        }
 
         $dingConfig = Arr::collapse(
             [
