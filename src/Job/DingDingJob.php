@@ -127,12 +127,10 @@ class DingDingJob extends Job
             LogService::insertData('Log', [data_get($this->trace, Constant::DB_COLUMN_PLATFORM, ''), date('Ymd')], $data);
         }
 
-        $dingConfig = Arr::collapse(
-            [
-                config('ding.' . $this->robot, []),
-                config('ding.' . $this->robot . '-' . $this->code, []),
-            ]
-        );
+        if (config('ding.' . $this->robot . '-' . $this->code)) {
+            $this->robot = $this->robot . '-' . $this->code;
+        }
+        $dingConfig = config('ding.' . $this->robot, []);
 
         $dingCodeData = explode(',', data_get($dingConfig, ['code'], ''));
         if (in_array('all', $dingCodeData) || in_array($this->code, $dingCodeData)) {
