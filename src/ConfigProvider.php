@@ -32,6 +32,8 @@ use Hyperf\ServiceGovernanceNacos\NacosDriver;
 use Hyperf\ServiceGovernanceNacos\Client as ServiceGovernanceNacosClient;
 
 use Hyperf\JsonRpc\JsonRpcHttpTransporter;
+use Hyperf\Grpc\PathGenerator;
+use Hyperf\GrpcClient\Request;
 use Hyperf\ServiceGovernance\Listener\RegisterServiceListener;
 
 use Hyperf\Redis\Pool\RedisPool;
@@ -100,6 +102,8 @@ class ConfigProvider
 //                        RedisPool::class => __DIR__ . '/../class_map/Hyperf/Redis/Pool/RedisPool.php',
 
                         JsonRpcHttpTransporter::class => __DIR__ . '/../class_map/Hyperf/JsonRpc/JsonRpcHttpTransporter.php',
+                        PathGenerator::class => __DIR__ . '/../class_map/Hyperf/Grpc/PathGenerator.php',
+                        Request::class => __DIR__ . '/../class_map/Hyperf/GrpcClient/Request.php',
 
                         ObjectVersionListInfo::class => __DIR__ . '/../class_map/OSS/Model/ObjectVersionListInfo.php',
                         SignerV1::class => __DIR__ . '/../class_map/OSS/Signer/SignerV1.php',
