@@ -8,6 +8,7 @@ use Business\Hyperf\Exception\BusinessException;
 use Hyperf\Collection\Arr;
 use Hyperf\Context\ResponseContext;
 use Hyperf\ExceptionHandler\ExceptionHandlerDispatcher;
+use Hyperf\Grpc\Parser;
 use Hyperf\HttpMessage\Stream\SwooleStream;
 use Hyperf\HttpServer\Exception\Handler\HttpExceptionHandler;
 use Hyperf\HttpServer\Router\Dispatched;
@@ -164,7 +165,6 @@ class AuthMiddleware implements MiddlewareInterface
 
                 if (empty($clientAuthorization)) {
                     $clientAuthorization = data_get($rpcContext, [$clientAuthKey]);//认证token
-
                 }
 //                $serverAuthorization = config('authorization.' . $clientRequestApp . '.' . $clientAuthKey);
 
@@ -267,16 +267,26 @@ class AuthMiddleware implements MiddlewareInterface
 ////
 //                    return ResponseContext::get();
 //                }
-                $rpcError = new BusinessException(
-                    $responseStatusCode,
-                    json_encode($_responseReasonPhrase, JSON_UNESCAPED_UNICODE)
-                );
 
+                $httpStatus = $responseStatusCode;
+                $message = json_encode($_responseReasonPhrase, JSON_UNESCAPED_UNICODE);
+                if ($protocol == 'grpc') {
+                    $grpcStatus = $httpStatus;
+                    return ResponseContext::get()->setStatus($httpStatus)
+                        ->setBody(new SwooleStream(Parser::serializeMessage(null)))
+                        ->addHeader('Server', 'Hyperf')
+                        ->addHeader('Content-Type', 'application/grpc')
+                        ->addHeader('trailer', 'grpc-status, grpc-message')
+                        ->withTrailer('grpc-status', (string)$grpcStatus)
+                        ->withTrailer('grpc-message', $message);
+                }
+
+                $rpcError = new BusinessException($httpStatus, $message);
                 $responseBuilder = $this->initProtocol($serverConfig, $protocol);
                 ResponseContext::set($responseBuilder->buildErrorResponse($request, $responseStatusCode, $rpcError));
+
 //
                 return ResponseContext::get();
-
 
             }
 
