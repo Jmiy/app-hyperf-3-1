@@ -83,14 +83,27 @@ class NacosDriver implements DriverInterface
         } catch (Throwable $throwable) {
         }
 
-        $address = $this->config->get('services.' . $index . '.' . $name . '.registry.address');
-        $consumerUsername = $this->config->get('services.' . $index . '.' . $name . '.registry.username');
-        $consumerPassword = $this->config->get('services.' . $index . '.' . $name . '.registry.password');
-        $_groupName = $this->config->get('services.' . $index . '.' . $name . '.registry.group_name');
-        $_namespaceId = $this->config->get('services.' . $index . '.' . $name . '.registry.namespace_id');
-        $_ephemeral = $this->config->get('services.' . $index . '.' . $name . '.registry.ephemeral');
-        $decrypt = $this->config->get('services.' . $index . '.' . $name . '.registry.decrypt');
-        $isRegistry = $this->config->get('services.' . $index . '.' . $name . '.is_registry', true);
+        $services = $this->config->get('services', []);
+        $_config = data_get($services, [$index, $name]);
+
+        $registryConfig = data_get($_config, ['registry']);
+        $address = data_get($registryConfig, ['address']);
+        $consumerUsername = data_get($registryConfig, ['username']);
+        $consumerPassword = data_get($registryConfig, ['password']);
+        $_groupName = data_get($registryConfig, ['group_name']);
+        $_namespaceId = data_get($registryConfig, ['namespace_id']);
+        $_ephemeral = data_get($registryConfig, ['ephemeral']);
+        $decrypt = data_get($registryConfig, ['decrypt']);
+        $isRegistry = data_get($_config, ['is_registry'], true);
+
+//        $address = $this->config->get('services.' . $index . '.' . $name . '.registry.address');
+//        $consumerUsername = $this->config->get('services.' . $index . '.' . $name . '.registry.username');
+//        $consumerPassword = $this->config->get('services.' . $index . '.' . $name . '.registry.password');
+//        $_groupName = $this->config->get('services.' . $index . '.' . $name . '.registry.group_name');
+//        $_namespaceId = $this->config->get('services.' . $index . '.' . $name . '.registry.namespace_id');
+//        $_ephemeral = $this->config->get('services.' . $index . '.' . $name . '.registry.ephemeral');
+//        $decrypt = $this->config->get('services.' . $index . '.' . $name . '.registry.decrypt');
+//        $isRegistry = $this->config->get('services.' . $index . '.' . $name . '.is_registry', true);
         $extendData = [
             'isRegistry' => $isRegistry,
         ];
@@ -168,73 +181,6 @@ class NacosDriver implements DriverInterface
 
         };
         return $this->base($index, $name, $host, $port, $metadata, $lightBeatEnabled, $callback);
-
-//        $baseUri = $this->client->getConfig()->getBaseUri();
-//        $username = $this->client->getConfig()->getUsername();
-//        $password = $this->client->getConfig()->getPassword();
-//        $groupName = $this->config->get('services.drivers.nacos.group_name');
-//        $namespaceId = $this->config->get('services.drivers.nacos.namespace_id');
-//
-//        $address = $this->config->get('services.consumers.' . $name . '.registry.address');
-//        $consumerUsername = $this->config->get('services.consumers.' . $name . '.registry.username');
-//        $consumerPassword = $this->config->get('services.consumers.' . $name . '.registry.password');
-//        $_groupName = $this->config->get('services.consumers.' . $name . '.registry.group_name');
-//        $_namespaceId = $this->config->get('services.consumers.' . $name . '.registry.namespace_id');
-//        $decrypt = $this->config->get('services.consumers.' . $name . '.registry.decrypt');
-//
-//        if ($decrypt) {
-//            $consumerUsername = call($decrypt, [$consumerUsername]);
-//            $consumerPassword = call($decrypt, [$consumerPassword]);
-//            $_groupName = call($decrypt, [$_groupName]);
-//            $_namespaceId = call($decrypt, [$_namespaceId]);
-//        }
-//
-//        if ($address) {
-//            $this->client->getConfig()->baseUri = $address;
-//        }
-//        if ($consumerUsername) {
-//            $this->client->getConfig()->username = $consumerUsername;
-//        }
-//        if ($consumerPassword) {
-//            $this->client->getConfig()->password = $consumerPassword;
-//        }
-//
-//        try {
-//            $response = $this->client->instance->list($name, [
-//                'groupName' => $_groupName ? $_groupName : $groupName,
-//                'namespaceId' => $_namespaceId ? $_namespaceId : $namespaceId,
-//            ]);
-//        } catch (Throwable $throwable) {
-//            throw $throwable;
-//        } finally {
-//            if ($address) {
-//                $this->client->getConfig()->baseUri = $baseUri;
-//            }
-//            if ($consumerUsername) {
-//                $this->client->getConfig()->username = $username;
-//            }
-//            if ($consumerPassword) {
-//                $this->client->getConfig()->password = $password;
-//            }
-//        }
-//
-//        if ($response->getStatusCode() !== 200) {
-//            throw new RequestException((string)$response->getBody(), $response->getStatusCode());
-//        }
-//
-//        $data = Json::decode((string)$response->getBody());
-//        $hosts = $data['hosts'] ?? [];
-//        $nodes = [];
-//        foreach ($hosts as $node) {
-//            if (isset($node['ip'], $node['port']) && ($node['healthy'] ?? false)) {
-//                $nodes[] = [
-//                    'host' => $node['ip'],
-//                    'port' => $node['port'],
-//                    'weight' => $this->getWeight($node['weight'] ?? 1),
-//                ];
-//            }
-//        }
-//        return $nodes;
     }
 
     public function baseRegister(string $name, string $host, int $port, array $metadata, &$lightBeatEnabled, $callback): mixed
