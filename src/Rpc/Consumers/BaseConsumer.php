@@ -95,8 +95,9 @@ class BaseConsumer
         $contextHeaders = Context::get(BusinessConstant::JSON_RPC_HEADERS_KEY, []);
 
         $proxy = data_get($context, ['requestOptions', RequestOptions::PROXY]);
-        $proxy = $proxy ?: config('services.consumers.' . static::$serviceName . '.registry.' . RequestOptions::PROXY);
-        $proxy = $proxy ?: config('services.consumers.' . static::$serviceName . '.' . RequestOptions::PROXY);
+        $consumersConfig = config('services.consumers');
+        $proxy = $proxy ?: data_get($consumersConfig, [static::$serviceName, 'registry', RequestOptions::PROXY]);//config('services.consumers.' . static::$serviceName . '.registry.' . RequestOptions::PROXY)
+        $proxy = $proxy ?: data_get($consumersConfig, [static::$serviceName, RequestOptions::PROXY]);//config('services.consumers.' . static::$serviceName . '.' . RequestOptions::PROXY);
         if ($proxy) {
             $context['requestOptions'][RequestOptions::PROXY] = $proxy;
         }
