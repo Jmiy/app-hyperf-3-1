@@ -13,11 +13,14 @@ use Hyperf\Database\Query\Processors\PostgresProcessor;
 use Hyperf\Database\Query\Grammars\PostgresGrammar;
 use Hyperf\Database\PostgresConnection;
 use Hyperf\Database\Connectors\PostgresConnector;
-use GuzzleHttp\Client;
-use Hyperf\Cache\Driver\RedisDriver;
 use Hyperf\Database\Model\SoftDeletes;
 use Hyperf\Database\Model\SoftDeletingScope;
 use Hyperf\Database\Model\Relations\HasManyThrough;
+
+use GuzzleHttp\Client;
+use GuzzleHttp\Psr7\MessageTrait;
+
+use Hyperf\Cache\Driver\RedisDriver;
 
 //use Hyperf\AsyncQueue\Driver\Driver;
 use Hyperf\RateLimit\Aspect\RateLimitAnnotationAspect;
@@ -43,8 +46,6 @@ use OSS\Model\ObjectVersionListInfo;
 use OSS\Signer\SignerV1;
 use OSS\Signer\SignerV4;
 use Hyperf\AsyncQueue\Driver\RedisDriver as AsyncQueueRedisDriver;
-
-
 
 class ConfigProvider
 {
@@ -79,6 +80,7 @@ class ConfigProvider
                         HasManyThrough::class => __DIR__ . '/../class_map/Hyperf/Database/Model/Relations/HasManyThrough.php',
 
                         Client::class => __DIR__ . '/../class_map/GuzzleHttp/Client.php',
+                        MessageTrait::class => __DIR__ . '/../class_map/GuzzleHttp/Psr7/MessageTrait.php',
                         RedisDriver::class => __DIR__ . '/../class_map/Hyperf/Cache/Driver/RedisDriver.php',
 //                        Driver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/Driver.php',
                         AsyncQueueRedisDriver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/RedisDriver.php',
