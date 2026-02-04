@@ -47,6 +47,8 @@ use OSS\Signer\SignerV1;
 use OSS\Signer\SignerV4;
 use Hyperf\AsyncQueue\Driver\RedisDriver as AsyncQueueRedisDriver;
 
+use Hyperf\Engine\Signal;
+
 class ConfigProvider
 {
     public function __invoke(): array
@@ -110,6 +112,8 @@ class ConfigProvider
                         ObjectVersionListInfo::class => __DIR__ . '/../class_map/OSS/Model/ObjectVersionListInfo.php',
                         SignerV1::class => __DIR__ . '/../class_map/OSS/Signer/SignerV1.php',
                         SignerV4::class => __DIR__ . '/../class_map/OSS/Signer/SignerV4.php',
+
+                        Signal::class => __DIR__ . '/../class_map/Hyperf/Engine/Signal.php',
 
                     ],
                 ],
