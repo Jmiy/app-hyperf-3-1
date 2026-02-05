@@ -57,7 +57,7 @@ class ConfigProvider
             'dependencies' => [
                 LuaInterface::class => LuaFactory::class,
                 //EncrypterInterface::class => EncrypterFactory::class,
-                'db.connector.pgsql' => PostgresConnector::class,
+//                'db.connector.pgsql' => PostgresConnector::class,
             ],
             'processes' => [
                 //RestartServiceProcess::class,
