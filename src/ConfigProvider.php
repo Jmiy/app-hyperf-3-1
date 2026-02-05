@@ -82,7 +82,7 @@ class ConfigProvider
                         HasManyThrough::class => __DIR__ . '/../class_map/Hyperf/Database/Model/Relations/HasManyThrough.php',
 
                         Client::class => __DIR__ . '/../class_map/GuzzleHttp/Client.php',
-                        MessageTrait::class => __DIR__ . '/../class_map/GuzzleHttp/Psr7/MessageTrait.php',
+//                        MessageTrait::class => __DIR__ . '/../class_map/GuzzleHttp/Psr7/MessageTrait.php',
                         RedisDriver::class => __DIR__ . '/../class_map/Hyperf/Cache/Driver/RedisDriver.php',
 //                        Driver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/Driver.php',
                         AsyncQueueRedisDriver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/RedisDriver.php',

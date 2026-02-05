@@ -174,10 +174,6 @@ trait MessageTrait
             return $this->trimAndValidateHeaderValues([$value]);
         }
 
-        if (count($value) === 0) {
-            throw new \InvalidArgumentException('Header value can not be an empty array.');
-        }
-
         return $this->trimAndValidateHeaderValues($value);
     }
 
@@ -199,11 +195,6 @@ trait MessageTrait
     {
         return array_map(function ($value) {
             if (!is_scalar($value) && null !== $value) {
-
-                if (is_array($value)) {
-                    return $this->trimAndValidateHeaderValues($value);
-                }
-
                 throw new \InvalidArgumentException(sprintf(
                     'Header value must be scalar or null but %s provided.',
                     is_object($value) ? get_class($value) : gettype($value)
