@@ -18,6 +18,6 @@ class Client extends Application
 {
     public function getConfig(): Config
     {
-        return $this->config;
+        return property_exists($this, 'config') ? $this->config : $this->conf;
     }
 }
