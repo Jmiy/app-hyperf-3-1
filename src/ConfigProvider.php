@@ -113,7 +113,7 @@ class ConfigProvider
                         SignerV1::class => __DIR__ . '/../class_map/OSS/Signer/SignerV1.php',
                         SignerV4::class => __DIR__ . '/../class_map/OSS/Signer/SignerV4.php',
 
-                        Signal::class => __DIR__ . '/../class_map/Hyperf/Engine/Signal.php',
+//                        Signal::class => __DIR__ . '/../class_map/Hyperf/Engine/Signal.php',
 
                     ],
                 ],
