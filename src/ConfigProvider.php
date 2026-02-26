@@ -21,6 +21,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Psr7\MessageTrait;
 
 use Hyperf\Cache\Driver\RedisDriver;
+use Hyperf\Cache\Helper\StringHelper;
 
 //use Hyperf\AsyncQueue\Driver\Driver;
 use Hyperf\RateLimit\Aspect\RateLimitAnnotationAspect;
@@ -84,6 +85,7 @@ class ConfigProvider
                         Client::class => __DIR__ . '/../class_map/GuzzleHttp/Client.php',
 //                        MessageTrait::class => __DIR__ . '/../class_map/GuzzleHttp/Psr7/MessageTrait.php',
                         RedisDriver::class => __DIR__ . '/../class_map/Hyperf/Cache/Driver/RedisDriver.php',
+                        StringHelper::class => __DIR__ . '/../class_map/Hyperf/Cache/Helper/StringHelper.php',
 //                        Driver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/Driver.php',
                         AsyncQueueRedisDriver::class => __DIR__ . '/../class_map/Hyperf/AsyncQueue/Driver/RedisDriver.php',
 
