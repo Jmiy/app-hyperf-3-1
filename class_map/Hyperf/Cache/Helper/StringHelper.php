@@ -30,7 +30,7 @@ class StringHelper
                 foreach ($matches as $search) {
                     $k = str_replace(['#{', '}'], '', $search);
 
-                    $value = Str::replaceFirst($search, (string)data_get($arguments, $k), $value);
+                    $value = Str::replaceFirst($search, (string) data_get($arguments, $k), $value);
                 }
             }
         } else {
