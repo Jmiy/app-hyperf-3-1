@@ -28,8 +28,9 @@ class RedisDriver extends Driver implements KeyCollectorInterface
     {
         parent::__construct($container, $config);
 
+        $this->redis = $container->get(RedisFactory::class)->get($config['options']['pool'] ?? data_get($config, ['connection'], 'default'));
 //        $this->poolName = data_get($config, 'connection', 'default');
-        $this->redis = $container->get(RedisFactory::class)->get(data_get($config, 'connection', 'default'));
+//        $this->redis = $container->get(RedisFactory::class)->get(data_get($config, 'connection', 'default'));
 
 //        $this->redis = $container->get(\Redis::class);
     }
