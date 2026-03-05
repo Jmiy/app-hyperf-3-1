@@ -52,7 +52,7 @@ class BloomFilter
      * @param int|null $size 布隆过滤器空间大小
      * @return float|int
      */
-    public static function hash(string $string, int $size = null)
+    public static function hash(string $string, int|null $size = null)
     {
         if ($size === null) {
             return crc32($string);
@@ -142,9 +142,15 @@ class BloomFilter
 
     /**
      * 添加元素到布隆过滤器
-     * @param string $item 要添加的元素
+     * @param string $key
+     * @param string $item
+     * @param int $k
+     * @param int|null $size
+     * @param int|null $seconds
+     * @param string $poolName
+     * @return void
      */
-    public static function add(string $key, string $item, int $k, ?int $size = 10000, int $seconds = null, string $poolName = 'default')
+    public static function add(string $key, string $item, int $k, ?int $size = 10000, int|null $seconds = null, string $poolName = 'default')
     {
         $hashFunctions = static::generateHashFunctions($k);
         foreach ($hashFunctions as $hashFn) {

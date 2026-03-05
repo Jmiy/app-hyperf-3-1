@@ -258,14 +258,21 @@ class Builder extends AbstractAspect
      */
     public function aop___call(ProceedingJoinPoint $proceedingJoinPoint)
     {
-        $method = data_get($proceedingJoinPoint->arguments, 'keys.method', '');
-        $parameters = data_get($proceedingJoinPoint->arguments, 'keys.parameters', []);
+        $methodKey = 'keys.method';
+        $parametersKey = 'keys.parameters';
+        $method = data_get($proceedingJoinPoint->arguments, $methodKey, '');
+        if (empty($method)) {
+            $methodKey = 'keys.name';
+            $parametersKey = 'keys.arguments';
+        }
+        $method = data_get($proceedingJoinPoint->arguments, $methodKey, '');
+        $parameters = data_get($proceedingJoinPoint->arguments, $parametersKey, []);
 
         switch ($method) {
             case 'insert':
             case 'insertGetId':
                 data_set($parameters, '0', $this->getAttributesData($proceedingJoinPoint, data_get($parameters, '0', []), data_get(static::$dbOperation, 1, null)));
-                data_set($proceedingJoinPoint->arguments, 'keys.parameters', $parameters);
+                data_set($proceedingJoinPoint->arguments, $parametersKey, $parameters);
                 break;
 
             default:

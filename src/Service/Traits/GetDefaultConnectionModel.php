@@ -26,7 +26,7 @@ trait GetDefaultConnectionModel
      * @param array|null $dbConfig 数据库配置
      * @return BaseModel|Relation|string|null
      */
-    public static function getModel(string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array $table = null, ?array $parameters = [], ?string $make = null, ?Relation &$relation = null, ?array $dbConfig = [])
+    public static function getModel(string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array|null $table = null, ?array $parameters = [], ?string $make = null, ?Relation &$relation = null, ?array $dbConfig = [])
     {
         $baseConfig = static::handleDbConfig($connection, $table);
         $connection = data_get($baseConfig, Constant::CONNECTION);

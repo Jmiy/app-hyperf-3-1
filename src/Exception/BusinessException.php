@@ -17,7 +17,12 @@ use Throwable;
 
 class BusinessException extends ServerException
 {
-    public function __construct(int $code = 0, string $message = null, Throwable $previous = null)
+    /**
+     * @param int $code
+     * @param string|null $message
+     * @param Throwable|null $previous
+     */
+    public function __construct(int $code = 0, string|null $message = null, Throwable|null $previous = null)
     {
         if (is_null($message)) {
             $message = ErrorCode::getMessage($code);

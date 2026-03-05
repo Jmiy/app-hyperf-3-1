@@ -73,7 +73,7 @@ trait BaseDb
      * @param array|null $dbConfig 数据库配置
      * @return BaseModel|Relation|string|null
      */
-    public static function getModel(string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array $table = null, ?array $parameters = [], ?string $make = null, ?Relation &$relation = null, ?array $dbConfig = [])
+    public static function getModel(string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array|null $table = null, ?array $parameters = [], ?string $make = null, ?Relation &$relation = null, ?array $dbConfig = [])
     {
         $baseConfig = static::handleDbConfig($connection, $table);
         $connection = data_get($baseConfig, Constant::CONNECTION);
@@ -95,7 +95,7 @@ trait BaseDb
      * @return bool|int
      * @throws \Throwable
      */
-    public static function insert(array $data, bool $isGetId = false, string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array $table = null)
+    public static function insert(array $data, bool $isGetId = false, string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array|null $table = null)
     {
         if (empty($data)) {
             return false;
@@ -131,7 +131,7 @@ trait BaseDb
      * @return int|bool
      * @throws \Throwable
      */
-    public static function update(array $where, array $data, array $handleData = [], string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array $table = null): int|bool
+    public static function update(array $where, array $data, array $handleData = [], string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array|null $table = null): int|bool
     {
         if (empty($where) || empty($data)) {
             return false;
@@ -171,7 +171,7 @@ trait BaseDb
      * @return int|bool
      * @throws \Throwable
      */
-    public static function delete(array $where, array $handleData = [], string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array $table = null): int|bool
+    public static function delete(array $where, array $handleData = [], string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array|null $table = null): int|bool
     {
         if (empty($where)) {
             return false;
@@ -216,7 +216,7 @@ trait BaseDb
      *    ];
      * @throws \Throwable
      */
-    public static function updateOrCreate(array $where, array $data, array $handleData = [], string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array $table = null)
+    public static function updateOrCreate(array $where, array $data, array|null $handleData = [], string|array|null $connection = Constant::DB_CONNECTION_DEFAULT, string|array|null $table = null)
     {
         $model = static::getModel($connection, $table);
         $key = serialize(Arr::collapse([
@@ -673,11 +673,11 @@ trait BaseDb
 
     /**
      * 处理数据库配置
-     * @param string|array $connection
-     * @param string|array $table
+     * @param string|array|null $connection
+     * @param string|array|null $table
      * @return array
      */
-    public static function handleDbConfig(string|array $connection = null, string|array $table = null): array
+    public static function handleDbConfig(string|array|null $connection = null, string|array|null $table = null): array
     {
         return call([static::getModelAlias(), 'handleDbConfig'], [$connection, $table]);
     }

@@ -32,7 +32,7 @@ trait HandleCache
      * @param string $group 缓存配置 group
      * @return int|mixed
      */
-    public static function getCacheTtl(int $ttl = null, string $key = 'ttl', string $group = 'default')
+    public static function getCacheTtl(int|null $ttl = null, string $key = 'ttl', string $group = 'default')
     {
         return $ttl !== null ? $ttl : config('cache.' . $group . '.' . $key, 86400); //认证缓存时间 单位秒
     }

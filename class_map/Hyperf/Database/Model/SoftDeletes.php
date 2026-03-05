@@ -154,10 +154,10 @@ trait SoftDeletes
 
     /**
      * Get the fully qualified "deleted at" column.
-     * @param \Hyperf\Database\Model\Builder $builder
+     * @param \Hyperf\Database\Model\Builder|null $builder
      * @return string
      */
-    public function getQualifiedDeletedAtColumn(Builder $builder = null)
+    public function getQualifiedDeletedAtColumn(Builder|null $builder = null)
     {
         $column = $this->getDeletedAtColumn();
 

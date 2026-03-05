@@ -14,18 +14,24 @@ use Business\Hyperf\Constants\Constant;
 
 trait ExistsFirst
 {
-
     /**
      * 检查是否存在
-     * @param int $actId 活动id
-     * @param int $customerId 会员id
-     * @param array $where where条件
-     * @param array $getData 是否获取记录  true:是  false:否
-     * @param string|array $connection 商城id
-     * @param string|array $table 国家
-     * @return int|object
+     * @param $where where条件
+     * @param $getData 是否返回数据
+     * @param $select 查询的字段
+     * @param $orders 排序
+     * @param string|array $connection 数据库连接
+     * @param string|array|null $table 数据表
+     * @return mixed
      */
-    public static function existsOrFirst($where = [], $getData = false, $select = null, $orders = [], string|array $connection = Constant::DB_CONNECTION_DEFAULT, string|array $table = null)
+    public static function existsOrFirst(
+        $where = [],
+        $getData = false,
+        $select = null,
+        $orders = [],
+        string|array $connection = Constant::DB_CONNECTION_DEFAULT,
+        string|array|null $table = null
+    ): mixed
     {
 
         if (empty($where)) {

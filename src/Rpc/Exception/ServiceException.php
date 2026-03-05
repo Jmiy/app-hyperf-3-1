@@ -18,7 +18,7 @@ class ServiceException extends \RuntimeException
 {
     private array $context = [];
 
-    public function __construct(array $context, string $message, int $code = 0, Throwable $previous = null)
+    public function __construct(array $context, string $message, int $code = 0, Throwable|null $previous = null)
     {
         $this->setContext($context);
         parent::__construct($message, $code, $previous);

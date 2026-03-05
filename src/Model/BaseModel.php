@@ -314,11 +314,11 @@ class BaseModel extends Model
 
     /**
      * 处理数据库连接池和表名
-     * @param string|array $connection 数据库连接
-     * @param string|array $table 表
+     * @param string|array|null $connection 数据库连接
+     * @param string|array|null $table 表
      * @return array
      */
-    public static function handleDbConfig(string|array $connection = null, string|array $table = null)
+    public static function handleDbConfig(string|array|null $connection = null, string|array|null $table = null)
     {
         $separator = '_';
         $connection = strtolower(implode($separator, array_filter(

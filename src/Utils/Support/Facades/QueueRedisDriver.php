@@ -277,7 +277,7 @@ class QueueRedisDriver
         return false;
     }
 
-    public static function reload(?string $poolName = 'default', ?string $channel = '', string $queue = null, mixed $queueConnection = null): int
+    public static function reload(?string $poolName = 'default', ?string $channel = '', string|null $queue = null, mixed $queueConnection = null): int
     {
         $redis = Redis::getRedis($poolName);
         $_channel = static::getChannelConfig($channel);
@@ -324,7 +324,7 @@ class QueueRedisDriver
         return $num;
     }
 
-    public static function flush(?string $poolName = 'default', ?string $channel = '', string $queue = null, mixed $queueConnection = null): bool
+    public static function flush(?string $poolName = 'default', ?string $channel = '', string|null $queue = null, mixed $queueConnection = null): bool
     {
         $redis = Redis::getRedis($poolName);
         $_channel = static::getChannelConfig($channel);

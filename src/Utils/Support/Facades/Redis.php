@@ -63,7 +63,7 @@ class Redis
      * $redis->sAdd('k', 'v1', 'v2', 'v3');    // int(2)
      * </pre>
      */
-    public static function sAdd($key, array $value, int $seconds = null, string $poolName = 'default')
+    public static function sAdd($key, array $value, int|null $seconds = null, string $poolName = 'default')
     {
         $instance = static::getRedis($poolName);
 
@@ -103,7 +103,7 @@ class Redis
      * $redis->hIncrBy('user:1', 'salary', 100); // Joe earns 100 more now.
      * </pre>
      */
-    public static function hmset($key, array $dictionary, int $seconds = null, string $poolName = 'default')
+    public static function hmset($key, array $dictionary, int|null $seconds = null, string $poolName = 'default')
     {
         $instance = static::getRedis($poolName);
 
@@ -141,7 +141,7 @@ class Redis
      * $redis->hIncrBy('h', 'x', 1); // h[x] ← 2 + 1. Returns 3
      * </pre>
      */
-    public static function hIncrBy($key, $hashKey, $value, int $seconds = null, string $poolName = 'default')
+    public static function hIncrBy($key, $hashKey, $value, int|null $seconds = null, string $poolName = 'default')
     {
         $instance = static::getRedis($poolName);
 
@@ -204,7 +204,7 @@ class Redis
      * </pre>
      * </pre>
      */
-    public static function zAdd($key, array $value, int $seconds = null, string $poolName = 'default')
+    public static function zAdd($key, array $value, int|null $seconds = null, string $poolName = 'default')
     {
         $instance = static::getRedis($poolName);
 
@@ -242,7 +242,7 @@ class Redis
      * $redis->incrBy('key1', 10);  // 14
      * </pre>
      */
-    public static function incrBy($key, $value, int $seconds = null, string $poolName = 'default')
+    public static function incrBy($key, $value, int|null $seconds = null, string $poolName = 'default')
     {
         $instance = static::getRedis($poolName);
 
@@ -281,7 +281,7 @@ class Redis
      * $redis->get('key');          // chr(0x2f) = "/" = b("0010 1111")
      * </pre>
      */
-    public static function setBit($key, $offset, $value, int $seconds = null, string $poolName = 'default')
+    public static function setBit($key, $offset, $value, int|null $seconds = null, string $poolName = 'default')
     {
         $instance = static::getRedis($poolName);
 
