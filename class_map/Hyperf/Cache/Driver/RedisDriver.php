@@ -957,7 +957,7 @@ class RedisDriver extends Driver implements KeyCollectorInterface
      * // }
      * </pre>
      */
-    public function hscan($key, $cursor, array $options = null)
+    public function hscan($key, $cursor, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, $this->handleParameters(func_get_args()));
     }
@@ -2220,17 +2220,17 @@ class RedisDriver extends Driver implements KeyCollectorInterface
         return $this->__call(__FUNCTION__, $this->handleParameters(func_get_args()));
     }
 
-    public function zinterstore($destination, $keys, array $options = null)
+    public function zinterstore($destination, $keys, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function zrange($key, $start, $stop, array $options = null)
+    public function zrange($key, $start, $stop, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function zrangebyscore($key, $min, $max, array $options = null)
+    public function zrangebyscore($key, $min, $max, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
@@ -2255,12 +2255,12 @@ class RedisDriver extends Driver implements KeyCollectorInterface
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function zrevrange($key, $start, $stop, array $options = null)
+    public function zrevrange($key, $start, $stop, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function zrevrangebyscore($key, $max, $min, array $options = null)
+    public function zrevrangebyscore($key, $max, $min, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
@@ -2270,7 +2270,7 @@ class RedisDriver extends Driver implements KeyCollectorInterface
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function zunionstore($destination, $keys, array $options = null)
+    public function zunionstore($destination, $keys, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
@@ -2280,17 +2280,17 @@ class RedisDriver extends Driver implements KeyCollectorInterface
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function zscan($key, $cursor, array $options = null)
+    public function zscan($key, $cursor, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function zrangebylex($key, $start, $stop, array $options = null)
+    public function zrangebylex($key, $start, $stop, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function zrevrangebylex($key, $start, $stop, array $options = null)
+    public function zrevrangebylex($key, $start, $stop, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
@@ -2515,12 +2515,12 @@ class RedisDriver extends Driver implements KeyCollectorInterface
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function georadius($key, $longitude, $latitude, $radius, $unit, array $options = null)
+    public function georadius($key, $longitude, $latitude, $radius, $unit, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
 
-    public function georadiusbymember($key, $member, $radius, $unit, array $options = null)
+    public function georadiusbymember($key, $member, $radius, $unit, array|null $options = null)
     {
         return $this->__call(__FUNCTION__, func_get_args());
     }
