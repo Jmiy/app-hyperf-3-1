@@ -9,6 +9,7 @@ declare(strict_types=1);
  * @contact  group@hyperf.io
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
+
 namespace Hyperf\Coroutine;
 
 use function Hyperf\Support\make;
@@ -84,7 +85,8 @@ class Concurrent
 //                    }
 
                     try {
-                        make(AppExceptionHandler::class)->log($exception);
+                        ApplicationContext::getContainer()->get(AppExceptionHandler::class)->log($exception);
+//                        make(AppExceptionHandler::class)->log($exception);
                     } catch (Throwable $e1) {
 
                     }
