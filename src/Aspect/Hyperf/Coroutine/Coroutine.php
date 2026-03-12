@@ -12,22 +12,22 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Aspect\Hyperf\Coroutine;
 
-use Business\Hyperf\Constants\Constant;
-use function Hyperf\Support\call;
-use function Hyperf\Support\make;
-use function Business\Hyperf\Utils\Collection\data_get;
-use function Hyperf\Config\config;
-use Hyperf\Context\Context;
 use Hyperf\Di\Annotation\Aspect;
 use Hyperf\Di\Aop\AbstractAspect;
 use Hyperf\Di\Aop\ProceedingJoinPoint;
-use Hyperf\Coroutine\Coroutine as CoroutineCoroutine;
 
-use Business\Hyperf\Exception\Handler\AppExceptionHandler;
-use Swoole\Coroutine as SwooleCoroutine;
-use Hyperf\Context\ApplicationContext;
+use Hyperf\Coroutine\Coroutine as CoroutineCoroutine;
 use Hyperf\Engine\Coroutine as Co;
+use Hyperf\Context\Context;
+use Hyperf\Context\ApplicationContext;
+
 use Throwable;
+use Business\Hyperf\Constants\Constant;
+use Business\Hyperf\Exception\Handler\AppExceptionHandler;
+use function Hyperf\Support\call;
+use function Hyperf\Support\make;
+use function Hyperf\Collection\data_get;
+use function Hyperf\Config\config;
 
 #[Aspect(classes: [CoroutineCoroutine::class . '::create', CoroutineCoroutine::class . '::printLog'], annotations: [])]
 class Coroutine extends AbstractAspect
@@ -35,22 +35,8 @@ class Coroutine extends AbstractAspect
     public function create(ProceedingJoinPoint $proceedingJoinPoint)
     {
         $arguments = $proceedingJoinPoint->arguments;
-        $callable = data_get($arguments, 'keys.callable', []);
+        $callable = data_get($arguments, ['keys', 'callable'], []);
         $id = CoroutineCoroutine::id();
-//        $coroutineId = SwooleCoroutine::create(static function () use ($callable, $id) {
-//            try {
-//                // 按需复制，禁止复制 Socket，不然会导致 Socket 跨协程调用从而报错。
-//                Context::copy($id, config('common.context_copy', []));
-//                call($callable);
-//            } catch (Throwable $throwable) {
-//                try {
-//                    make(AppExceptionHandler::class)->log($throwable);
-//                } catch (\Throwable $e1) {
-//
-//                }
-//            }
-//        });
-//        return is_int($coroutineId) ? $coroutineId : -1;
 
         $coroutine = Co::create(static function () use ($callable, $id) {
             try {
@@ -61,7 +47,8 @@ class Coroutine extends AbstractAspect
                 call($callable);
             } catch (Throwable $throwable) {
                 try {
-                    make(AppExceptionHandler::class)->log($throwable);
+                    ApplicationContext::getContainer()->get(AppExceptionHandler::class)->log($throwable);
+//                    make(AppExceptionHandler::class)->log($throwable);
                 } catch (Throwable $e1) {
 
                 }
@@ -79,7 +66,8 @@ class Coroutine extends AbstractAspect
     {
         $throwable = $proceedingJoinPoint->getArguments();
         try {
-            make(AppExceptionHandler::class)->log(...$throwable);
+//            make(AppExceptionHandler::class)->log(...$throwable);
+            ApplicationContext::getContainer()->get(AppExceptionHandler::class)->log(...$throwable);
         } catch (Throwable $e1) {
 
         }

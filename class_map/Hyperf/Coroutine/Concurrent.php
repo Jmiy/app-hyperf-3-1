@@ -14,6 +14,7 @@ namespace Hyperf\Coroutine;
 
 use function Hyperf\Support\make;
 use Business\Hyperf\Exception\Handler\AppExceptionHandler;
+
 use Hyperf\Context\ApplicationContext;
 use Hyperf\Contract\StdoutLoggerInterface;
 use Hyperf\Coroutine\Exception\InvalidArgumentException;
@@ -34,7 +35,7 @@ class Concurrent
         $this->channel = new Channel($limit);
     }
 
-    public function __call($name, $arguments)
+    public function __call(string $name, array $arguments): mixed
     {
         if (in_array($name, ['isFull', 'isEmpty'])) {
             return $this->channel->{$name}(...$arguments);
@@ -77,20 +78,12 @@ class Concurrent
                 $callable();
             } catch (Throwable $exception) {
                 if (ApplicationContext::hasContainer()) {
-//                    $container = ApplicationContext::getContainer();
-//                    if ($container->has(StdoutLoggerInterface::class) && $container->has(FormatterInterface::class)) {
-//                        $logger = $container->get(StdoutLoggerInterface::class);
-//                        $formatter = $container->get(FormatterInterface::class);
-//                        $logger->error($formatter->format($exception));
-//                    }
-
                     try {
                         ApplicationContext::getContainer()->get(AppExceptionHandler::class)->log($exception);
 //                        make(AppExceptionHandler::class)->log($exception);
-                    } catch (Throwable $e1) {
+                    } catch (Throwable $throwable) {
 
                     }
-
                 }
             } finally {
                 $this->channel->pop();
