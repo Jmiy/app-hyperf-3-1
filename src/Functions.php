@@ -356,8 +356,7 @@ if (!function_exists('getClientIP')) {
             ];
 
             $clientIp = '';
-//            $request = $request === null ? Context::get(ServerRequestInterface::class) : $request;
-            $request = $request === null ? RequestContext::get() : $request;
+            $request = $request === null ? Context::get(ServerRequestInterface::class) : $request;
 
             if (empty($request)) {
                 Context::set($ipContextKey, $clientIp);

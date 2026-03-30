@@ -13,21 +13,18 @@ declare(strict_types=1);
 namespace Business\Hyperf\Exception\Handler;
 
 use Hyperf\Collection\Arr;
+use Psr\Http\Message\ServerRequestInterface;
 use function Business\Hyperf\Utils\Collection\data_get;
 use function Hyperf\Config\config;
 use Business\Hyperf\Constants\Constant;
-use Business\Hyperf\Exception\BusinessException;
 use Hyperf\Context\Context;
 use Hyperf\Contract\StdoutLoggerInterface;
 use Hyperf\ExceptionHandler\ExceptionHandler;
 use Hyperf\HttpMessage\Stream\SwooleStream;
-use Hyperf\Logger\LoggerFactory;
-use Hyperf\Utils\ApplicationContext;
 use Psr\Http\Message\ResponseInterface;
 use Throwable;
 use Business\Hyperf\Utils\Response;
 use Business\Hyperf\Utils\Monitor\Contract;
-use Hyperf\Context\RequestContext;
 use Hyperf\HttpServer\Router\Dispatched;
 use Carbon\Carbon;
 
@@ -68,7 +65,7 @@ class AppExceptionHandler extends ExceptionHandler
         $url = '';
         $requestData = [];
 
-        $request = RequestContext::get();
+        $request = Context::get(ServerRequestInterface::class);
         if (!empty($request)) {
             $routeInfo = $request->getAttribute(Dispatched::class);
             $serverName = data_get($routeInfo, ['serverName'], 'http');
