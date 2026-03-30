@@ -32,6 +32,7 @@ use Throwable;
 use Business\Hyperf\Exception\Handler\AppExceptionHandler;
 use Business\Hyperf\Job\PublicJob;
 use function Hyperf\Config\config;
+use function Hyperf\Coroutine\go;
 
 #[Listener]
 class QueueHandleListener implements ListenerInterface
@@ -89,11 +90,15 @@ class QueueHandleListener implements ListenerInterface
                     $this->logger->error(sprintf('Failed %s.', $jobClass));
                     $this->logger->error($this->formatter->format($event->getThrowable()));
 
-                    try {
-                        make(AppExceptionHandler::class)->log($event->getThrowable());
-                    } catch (Throwable $e1) {
+//                    try {
+//                        make(AppExceptionHandler::class)->log($event->getThrowable());
+//                    } catch (Throwable $e1) {
+//                    }
 
-                    }
+                    go(function () use ($event) {
+                        throw $event->getThrowable();
+                    });
+
                     break;
 
                 case $event instanceof RetryHandle:
@@ -102,11 +107,15 @@ class QueueHandleListener implements ListenerInterface
                     $this->logger->warning(sprintf('Retried %s.', $jobClass));
                     $this->logger->error($this->formatter->format($event->getThrowable()));
 
-                    try {
-                        make(AppExceptionHandler::class)->log($event->getThrowable());
-                    } catch (Throwable $e1) {
+//                    try {
+//                        make(AppExceptionHandler::class)->log($event->getThrowable());
+//                    } catch (Throwable $e1) {
+//
+//                    }
 
-                    }
+                    go(function () use ($event) {
+                        throw $event->getThrowable();
+                    });
 
                     break;
             }
