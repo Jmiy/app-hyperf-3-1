@@ -70,30 +70,18 @@ class QueueHandleListener implements ListenerInterface
             if ($job instanceof AnnotationJob) {
                 $jobClass = sprintf('Job[%s@%s]', $job->class, $job->method);
             }
-            $date = date('Y-m-d H:i:s');
 
             switch (true) {
                 case $event instanceof BeforeHandle:
-//                    $this->logger->info(sprintf('[%s] Processing %s.', $date, $jobClass));
-                    $this->logger->info(sprintf('Processing %s.', $jobClass));
+                    $this->logger->info(sprintf('BeforeHandle Processing %s.', $jobClass));
                     break;
 
                 case $event instanceof AfterHandle:
-//                    $this->logger->info(sprintf('[%s] Processed %s.', $date, $jobClass));
-                    $this->logger->info(sprintf('Processed %s.', $jobClass));
+                    $this->logger->info(sprintf('AfterHandle Processed %s.', $jobClass));
                     break;
 
                 case $event instanceof FailedHandle:
-
-//                    $this->logger->error(sprintf('[%s] Failed %s.', $date, $jobClass));
-//                    $this->logger->error($this->formatter->format($event->getThrowable()));
-                    $this->logger->error(sprintf('Failed %s.', $jobClass));
-                    $this->logger->error($this->formatter->format($event->getThrowable()));
-
-//                    try {
-//                        make(AppExceptionHandler::class)->log($event->getThrowable());
-//                    } catch (Throwable $e1) {
-//                    }
+                    $this->logger->error(sprintf('FailedHandle Processed %s. Throwable：%s', $jobClass, $this->formatter->format($event->getThrowable())));
 
                     go(function () use ($event) {
                         throw $event->getThrowable();
@@ -103,19 +91,11 @@ class QueueHandleListener implements ListenerInterface
 
                 case $event instanceof RetryHandle:
 
-//                    $this->logger->warning(sprintf('[%s] Retried %s.', $date, $jobClass));
-                    $this->logger->warning(sprintf('Retried %s.', $jobClass));
-                    $this->logger->error($this->formatter->format($event->getThrowable()));
+                    $this->logger->warning(sprintf('RetryHandle Processed %s. Throwable：%s', $jobClass, $this->formatter->format($event->getThrowable())));
 
-//                    try {
-//                        make(AppExceptionHandler::class)->log($event->getThrowable());
-//                    } catch (Throwable $e1) {
-//
-//                    }
-
-                    go(function () use ($event) {
-                        throw $event->getThrowable();
-                    });
+//                    go(function () use ($event) {
+//                        throw $event->getThrowable();
+//                    });
 
                     break;
             }
