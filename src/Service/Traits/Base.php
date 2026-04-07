@@ -93,7 +93,7 @@ trait Base
     /**
      * 包装数据
      * @param mixed $data 要包装的数据
-     * @return false|string
+     * @return false|string a JSON encoded string on success or FALSE on failure.
      */
     public static function pack(mixed $data): string|false
     {
@@ -104,7 +104,6 @@ trait Base
 
         /** @var string */
         return $json;
-//        return json_encode($data, JSON_UNESCAPED_UNICODE);
     }
 
     /**
@@ -114,14 +113,28 @@ trait Base
      */
     public static function unpack(mixed $data): mixed
     {
+        if (function_exists('json_validate')) {
+            if (!json_validate($data)) {
+                // 截取部分原始内容，避免日志过大
+                $preview = strlen($data) > 200 ? substr($data, 0, 200) . '...' : $data;
+                throw new \InvalidArgumentException(
+                    sprintf('json_validate Invalid JSON: %s. Raw data preview: %s', \json_last_error_msg(), $preview)
+                );
+            }
+
+            return \json_decode($data, true);
+        }
+
         $data = \json_decode($data, true);
         if (\JSON_ERROR_NONE !== \json_last_error()) {
-            throw new \InvalidArgumentException('json_decode error: ' . \json_last_error_msg());
+            // 截取部分原始内容，避免日志过大
+            $preview = strlen($data) > 200 ? substr($data, 0, 200) . '...' : $data;
+            throw new \InvalidArgumentException(
+                sprintf('json_decode Invalid JSON: %s. Raw data preview: %s', \json_last_error_msg(), $preview)
+            );
         }
 
         return $data;
-
-//        return json_decode($data, true);
     }
 
     /**
