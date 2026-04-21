@@ -575,9 +575,9 @@ trait BaseDb
      */
     public static function createTable(
         string|ConnectionInterface $connection = Constant::DB_CONNECTION_DEFAULT,
-        array $tableData = [],
-        ?bool $isDrop = false,
-        ?bool $isThrowableDropTable = false
+        array                      $tableData = [],
+        ?bool                      $isDrop = false,
+        ?bool                      $isThrowableDropTable = false
     ): bool
     {
         if (empty($tableData)) {
@@ -717,7 +717,7 @@ trait BaseDb
     public static function handleParameters(
         string|array $connection,
         string|array $table,
-        ?bool $isThrowableDropTable = false
+        ?bool        $isThrowableDropTable = false
     )
     {
         $platform = $connection;
@@ -893,9 +893,9 @@ trait BaseDb
     public static function insertData(
         string|array $connection,
         string|array $table,
-        array $data,
-        ?bool $isGetId = false,
-        ?bool $isThrowableDropTable = false
+        array        $data,
+        ?bool        $isGetId = false,
+        ?bool        $isThrowableDropTable = false
     )
     {
         static::handleParameters($connection, $table, $isThrowableDropTable);
@@ -916,9 +916,9 @@ trait BaseDb
         string|array $connection,
         string|array $table,
         string|array $where,
-        array $data,
-        ?array $handleData = [],
-        ?bool $isThrowableDropTable = false
+        array        $data,
+        ?array       $handleData = [],
+        ?bool        $isThrowableDropTable = false
     )
     {
         static::handleParameters($connection, $table, $isThrowableDropTable);
@@ -940,8 +940,8 @@ trait BaseDb
         string|array $connection,
         string|array $table,
         string|array $where,
-        ?array $handleData = [],
-        ?bool $isThrowableDropTable = false
+        ?array       $handleData = [],
+        ?bool        $isThrowableDropTable = false
     )
     {
         static::handleParameters($connection, $table, $isThrowableDropTable);
@@ -967,14 +967,121 @@ trait BaseDb
         string|array $connection,
         string|array $table,
         string|array $where,
-        array $data,
-        ?array $handleData = [],
-        ?bool $isThrowableDropTable = false
+        array        $data,
+        ?array       $handleData = [],
+        ?bool        $isThrowableDropTable = false
     )
     {
         static::handleParameters($connection, $table, $isThrowableDropTable);
 
         return static::updateOrCreate($where, $data, $handleData, $connection, $table); //更新或者新增记录
+    }
+
+    public static function handleDeleteTableData(
+        string            $where = '',
+        string|array      $connection = Constant::DB_CONNECTION_DEFAULT,
+        string|array|null $table = null,
+        bool              $isHandle = false,
+        bool              $isDelBak = true,
+        ?array            $parameters = [],
+        ?string           $make = null,
+        ?Relation         &$relation = null,
+        ?array            $dbConfig = []
+    )
+    {
+//-- 1. 创建新表
+//DROP TABLE IF EXISTS table_new;
+//CREATE TABLE IF NOT EXISTS table_new LIKE table_src;
+//
+//-- 2. 插入保留数据（这里假设保留最近10天数据）
+//INSERT INTO table_new
+//SELECT * FROM table_src
+//WHERE update_time >= DATE_SUB(NOW(), INTERVAL 10 DAY);
+//
+//-- 3. 校验行数（可选）
+//SELECT 'new' AS table_name, COUNT(*) AS `row_count` FROM table_new
+//UNION ALL
+//SELECT 'old_keep' AS table_name, COUNT(*) AS `row_count` FROM table_src WHERE update_time >= DATE_SUB(NOW(), INTERVAL 10 DAY);
+//
+//-- 4. 切换表
+//RENAME TABLE table_src TO table_bak,
+//             table_new TO table_src;
+//
+//-- 5. 清理旧表（确认无误后执行）
+//DROP TABLE table_bak;
+
+        $model = static::getModel($connection, $table, $parameters, $make, $relation, $dbConfig);
+
+        $connectionName = $model->getConnectionName();
+        $table = config(Constant::DATABASES . Constant::LINKER . $connectionName . Constant::LINKER . 'prefix') . $model->getTable();
+        $connectionInstance = $model->getConnection();
+
+        $tableNew = $table . '_new_handle_delete_table_data';
+        $tableOld = $table . '_bak_handle_delete_table_data';
+
+        $sqlData = [
+            "DROP TABLE IF EXISTS {$tableNew};",
+            "CREATE TABLE IF NOT EXISTS {$tableNew} LIKE {$table};",
+            "INSERT INTO {$tableNew} SELECT * FROM {$table} WHERE ($where);",
+            function () use ($connectionInstance, $tableNew, $table, $where) {
+                $sql = "SELECT COUNT(*) AS `row_count` FROM {$tableNew}
+UNION ALL
+SELECT COUNT(*) AS `row_count` FROM {$table} WHERE ($where);";
+
+                $data = $connectionInstance->select($sql);
+
+                $_count = [];
+                foreach ($data as $row) {
+                    $_count[] = data_get($row, ['row_count'], 0);
+                }
+
+//                var_dump('======handleDrop======', $sql, $data, $_count);
+
+                $_count = array_unique($_count);
+//                var_dump($_count);
+
+                return [
+                    'sql' => $sql,
+                    'isHandle' => count($_count) == 1 ? true : false,
+                ];
+            },
+            "DROP TABLE IF EXISTS {$tableOld};",
+            "RENAME TABLE {$table} TO {$tableOld},{$tableNew} TO {$table};",
+        ];
+
+        if ($isDelBak) {//如果要删除备份，就执行删除备份的动作
+            $sqlData[] = "DROP TABLE IF EXISTS {$tableOld};";
+        }
+
+        $rs = [];
+        if ($isHandle) {
+            foreach ($sqlData as $sql) {
+                if ($sql instanceof Closure) {
+                    $result = call($sql, []);
+
+                    $isHandle = data_get($result, ['isHandle'], true);
+                    $sql = data_get($result, ['sql'], '');
+                    $rs[$sql] = $isHandle;
+                    if ($isHandle === false) {//如果迁移数据失败，就停止后续所有的操作
+                        break;
+                    }
+                }
+
+                $rs[$sql] = $connectionInstance->statement($sql);
+
+                if ($rs[$sql] !== true) {//如果执行失败，就停止后续所有的操作
+                    break;
+                }
+            }
+        }
+
+        return [
+            'table' => $table,
+            'connectionName' => $connectionName,
+            'sqlData' => $sqlData,
+            'rs' => $rs,
+        ];
+
     }
 
 }
