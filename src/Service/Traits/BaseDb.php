@@ -24,6 +24,7 @@ use Hyperf\DbConnection\Db as DB;
 use Hyperf\DbConnection\Model\Model;
 use Hyperf\Database\Model\Relations\Relation;
 use function Hyperf\Support\env;
+use Closure;
 
 trait BaseDb
 {
