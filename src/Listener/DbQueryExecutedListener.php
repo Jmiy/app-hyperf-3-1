@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 namespace Business\Hyperf\Listener;
 
+use function Hyperf\Collection\data_get;
 use function Hyperf\Config\config;
 use Hyperf\Collection\Arr;
 use Hyperf\Database\Events\QueryExecuted;
@@ -41,6 +42,17 @@ class DbQueryExecutedListener implements ListenerInterface
         ];
     }
 
+    public function getRawQueryLog($connection, $queryLog = [])
+    {
+        return array_map(fn (array $log) => [
+            'raw_query' => $connection->getQueryGrammar()->substituteBindingsIntoRawSql(
+                $log['query'],
+                array_map(fn ($value) => $connection->escape($value), $connection->prepareBindings($log['bindings']))
+            ),
+            'time' => $log['time'],
+        ], $queryLog);
+    }
+
     /**
      * @param QueryExecuted $event
      */
@@ -51,21 +63,30 @@ class DbQueryExecutedListener implements ListenerInterface
         }
 
         if ($event instanceof QueryExecuted) {
-            $sql = $event->sql;
-            if (!Arr::isAssoc($event->bindings)) {
-                $position = 0;
-                foreach ($event->bindings as $value) {
-                    $position = strpos($sql, '?', $position);
-                    if ($position === false) {
-                        break;
-                    }
-                    $value = "'{$value}'";
-                    $sql = substr_replace($sql, $value, $position, 1);
-                    $position += strlen($value);
-                }
-            }
+//            $sql = $event->sql;
+//            if (!Arr::isAssoc($event->bindings)) {
+//                $position = 0;
+//                foreach ($event->bindings as $value) {
+//                    $position = strpos($sql, '?', $position);
+//                    if ($position === false) {
+//                        break;
+//                    }
+//                    $value = "'{$value}'";
+//                    $sql = substr_replace($sql, $value, $position, 1);
+//                    $position += strlen($value);
+//                }
+//            }
 
-            $this->logger->info(sprintf('[%s ms] %s', $event->time, $sql));
+            $rawQueryLog = $this->getRawQueryLog($event->connection, [
+                [
+                    'query' => $event->sql,
+                    'bindings' => $event->bindings,
+                    'time' => $event->time,
+                ]
+            ]);
+            $sql = data_get($rawQueryLog, [0, 'raw_query']) ?? '';
+
+            $this->logger->info(sprintf('[%s ms databases.pool: %s] %s', $event->time, $event->connectionName, $sql));
         }
     }
 }

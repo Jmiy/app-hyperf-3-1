@@ -980,6 +980,7 @@ trait BaseDb
 
     public static function handleDeleteTableData(
         string            $where = '',
+        string|array      $delWhere = [],
         string|array      $connection = Constant::DB_CONNECTION_DEFAULT,
         string|array|null $table = null,
         bool              $isHandle = false,
@@ -1021,9 +1022,33 @@ trait BaseDb
         $tableOld = $table . '_bak_handle_delete_table_data';
 
         $sqlData = [
+            function () use ($connectionInstance, $model, $where, $delWhere) {
+
+                // 启用 SQL 数据记录功能
+                $connectionInstance->enableQueryLog();
+
+                //判断是否存在需要删除的记录
+                $rs = $model->buildWhere($delWhere)->select([DB::raw('1')])->first();
+
+                $queryLog = Arr::last($connectionInstance->getRawQueryLog());// 打印最后一条 SQL 相关数据
+
+                $connectionInstance->disableQueryLog();
+                $connectionInstance->flushQueryLog();
+
+                $sql = data_get($queryLog, ["raw_query"]) ?? '';
+
+//                var_dump('delWhere=======', $sql, $queryLog);
+
+                return [
+                    'sql' => $sql,// 打印最后一条 SQL 相关数据
+                    'isHandle' => !empty($rs) ? true : false,
+                ];
+            },
+
             "DROP TABLE IF EXISTS {$tableNew};",
             "CREATE TABLE IF NOT EXISTS {$tableNew} LIKE {$table};",
             "INSERT INTO {$tableNew} SELECT * FROM {$table} WHERE ($where);",
+
             function () use ($connectionInstance, $tableNew, $table, $where) {
                 $sql = "SELECT COUNT(*) AS `row_count` FROM {$tableNew}
 UNION ALL
@@ -1046,6 +1071,7 @@ SELECT COUNT(*) AS `row_count` FROM {$table} WHERE ($where);";
                     'isHandle' => count($_count) == 1 ? true : false,
                 ];
             },
+
             "DROP TABLE IF EXISTS {$tableOld};",
             "RENAME TABLE {$table} TO {$tableOld},{$tableNew} TO {$table};",
         ];
@@ -1057,24 +1083,31 @@ SELECT COUNT(*) AS `row_count` FROM {$table} WHERE ($where);";
         $rs = [];
         if ($isHandle) {
             foreach ($sqlData as $sql) {
+                $_isHandle = null;
+
                 if ($sql instanceof Closure) {
                     $result = call($sql, []);
 
-                    $isHandle = data_get($result, ['isHandle'], true);
+                    $_isHandle = data_get($result, ['isHandle'], true);
                     $sql = data_get($result, ['sql'], '');
-                    $rs[$sql] = $isHandle;
-                    if ($isHandle === false) {//如果迁移数据失败，就停止后续所有的操作
-                        break;
-                    }
+                    $rs[$sql][] = $_isHandle;
+                } else {
+                    $rs[$sql][] = $_isHandle = $connectionInstance->statement($sql);
                 }
 
-                $rs[$sql] = $connectionInstance->statement($sql);
-
-                if ($rs[$sql] !== true) {//如果执行失败，就停止后续所有的操作
+                if ($_isHandle !== true) {//如果执行失败，就停止后续所有的操作
                     break;
                 }
+
             }
         }
+
+//        var_dump([
+//            'table' => $table,
+//            'connectionName' => $connectionName,
+////            'sqlData' => $sqlData,
+//            'rs' => $rs,
+//        ]);
 
         return [
             'table' => $table,
