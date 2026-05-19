@@ -9,7 +9,9 @@
 
 namespace Business\Hyperf\Service\Traits;
 
+use Hyperf\Codec\Json;
 use function Hyperf\Collection\data_set;
+use function Hyperf\Support\call;
 use function Hyperf\Support\make;
 use function Hyperf\Config\config;
 use Hyperf\Collection\Arr;
@@ -194,7 +196,28 @@ trait BaseClient
         }
 
         if ($response !== null) {
-            $responseBody = $response->getBody()->getContents();
+
+            $responseBody = '';
+            if (data_get($options, [RequestOptions::STREAM]) !== true) {
+                $responseBody = $response->getBody()->getContents();
+            }
+
+            $businessCallBack = data_get($options, ['businessCallBack']);
+            if ($businessCallBack) {
+                foreach ($businessCallBack as $callback) {
+                    $isHandle = call($callback, [$response, &$responseBody]);
+                    if ($isHandle === false) {
+                        break;
+                    }
+                }
+            }
+
+            if (empty($responseBody)) {
+                $responseBody = $response->getBody()->getContents();
+            }
+
+            $parseResponseBody = static::parseResponse($responseBody, $response);
+
             $responseData = Arr::collapse([
                 $responseData,
                 [
@@ -203,6 +226,11 @@ trait BaseClient
                     Constant::RESPONSE_REASON_PHRASE => $response->getReasonPhrase(),//响应状态码描述 OK
                     Constant::RESPONSE_HEADERS => $response->getHeaders(),//响应头
                     Constant::RESPONSE_BODY => $responseBody,//响应body
+                    'context' => [
+                        'parseResponseBody' => $parseResponseBody,//解析后的响应body
+                        'psrResponseInterface' => $response,//响应body
+                    ],//用于告诉业务到这个字段为止后面的字段(包含本字段)不需要写入请求日志
+
                 ]
             ]);
 //            var_dump(\GuzzleHttp\Psr7\Message::toString($response));
@@ -237,6 +265,92 @@ trait BaseClient
         }
 
         return json_decode(data_get($responseData, [Constant::RESPONSE_BODY], '[]'), true);
+    }
+
+    /**
+     * 解析 SSE (Server-Sent Events) 响应流
+     *
+     * @param string $rawResponse 原始的 HTTP 响应体字符串
+     * @return array 返回数组，每个元素结构为 ['event' => string|null, 'data' => object|array|string|null, 'srcBlock' => string]
+     */
+    public static function parseSseResponse(string $rawResponse): array
+    {
+        if (empty($rawResponse)) {
+            return [];
+        }
+
+        //标准化数据 统一将 换行符 替换为 \n
+        $normalized = str_replace("\r\n", "\n", $rawResponse);
+
+        // 按两个连续换行符分割事件块（一些 SSE 实现可能使用 \n\n）
+        $blocks = explode("\n\n", $normalized);
+
+        $result = [];
+        foreach ($blocks as $block) {
+            $block = trim($block);
+            if ($block === '') {
+                continue;
+            }
+
+            $lines = explode("\n", $block);
+            $event = null;
+            $data = null;
+
+            foreach ($lines as $line) {
+                // 忽略注释行（以冒号开头）
+                if (strpos($line, ':') === 0) {
+                    continue;
+                }
+
+                if (strpos($line, 'event:') === 0) {
+                    $event = trim(substr($line, 6));
+                } elseif (strpos($line, 'data:') === 0) {
+                    $dataJson = trim(substr($line, 5));
+
+                    // 解码 JSON，如果失败则保留原始字符串
+                    $decoded = json_decode($dataJson);
+
+                    $data = $decoded !== null ? $decoded : $dataJson;
+                }
+            }
+
+            // 确保事件有名称且有 data 数据（有些 SSE 可能没有 data 字段，但这里默认存在）
+            $result[] = [
+                'event' => $event,
+                'data' => $data,
+                'srcBlock' => $block,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * 解析 SSE (Server-Sent Events) 响应流
+     *
+     * @param string $rawResponse 原始的 HTTP 响应体字符串
+     * @return mixed 返回数组，每个元素结构为 ['event' => string, 'data' => array|null, 'srcBlock' => string]
+     */
+    public static function parseResponse(string $rawResponse, $response): mixed
+    {
+
+        $responseHeaders = $response->getHeaders();//响应头
+
+        $parseResponseBody = null;
+        try {
+            $contentType = implode('; ', data_get($responseHeaders, 'content-type', []));
+            $parseResponseBody = match (true) {
+                stripos($contentType, 'text/event-stream') !== false => static::parseSseResponse($rawResponse),
+                stripos($contentType, 'json') !== false => json_decode($rawResponse),
+                default => $rawResponse,
+            };
+        } catch (Throwable $throwable) {
+            go(function () use ($throwable) {
+                throw $throwable;
+            });
+        }
+
+        return $parseResponseBody;
     }
 
 }

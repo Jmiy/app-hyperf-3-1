@@ -12,6 +12,7 @@ declare(strict_types=1);
  */
 
 use Hyperf\Support\Network;
+use Psr\Http\Message\ResponseInterface;
 use Swoole\Server;
 use function Hyperf\Collection\data_set;
 use function Hyperf\Support\make;
@@ -262,21 +263,41 @@ if (!function_exists('decrypt')) {
 if (!function_exists('response')) {
     /**
      * Return a new response from the application.
-     *
-     * @param string $server
-     * @param int $status
+     * @param $server
+     * @param $status
      * @param array $headers
-     * @return \Illuminate\Http\Response|\Laravel\Lumen\Http\ResponseFactory
+     * @param array|null $protocolData
+     * @return mixed|Hyperf\HttpServer\Response|null
      */
-    function response($server = 'http_response', $status = Constant::CODE_SUCCESS, array $headers = [])
+    function response($server = 'http_response', $status = Constant::CODE_SUCCESS, array $headers = [], ?array $protocolData = [])
     {
-        $response = app($server)->withStatus($status);
+//        $response = app($server)->withStatus($status);
+//
+//        foreach ($headers as $name => $value) {
+//            $response = $response->withHeader($name, $value);
+//        }
 
-        foreach ($headers as $name => $value) {
-            $response = $response->withHeader($name, $value);
+        $response = Context::get(ResponseInterface::class);
+        if ($headers) {
+            foreach ($headers as $key => $value) {
+                $response = $response->withHeader($key, $value);
+            }
         }
 
-        return $response;
+        $version = data_get($protocolData, ['version']);
+        $code = data_get($protocolData, ['code'], $status);
+        $reasonPhrase = data_get($protocolData, ['reasonPhrase'], '') ?: '';
+
+        if ($version !== null) {
+            $response = $response->withProtocolVersion($version);
+        }
+
+        if ($code !== null) {
+            $response = $response->withStatus($code, $reasonPhrase);
+        }
+        Context::set(ResponseInterface::class, $response);
+
+        return app($server);
     }
 }
 

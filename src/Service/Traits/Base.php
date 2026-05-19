@@ -9,11 +9,11 @@
 
 namespace Business\Hyperf\Service\Traits;
 
+use Hyperf\Codec\Exception\InvalidArgumentException;
+use Business\Hyperf\Kernel\Codec\Json;
 use function Hyperf\Support\call;
 use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Collection\Arr;
-use Business\Hyperf\Constants\Constant;
-use Business\Hyperf\Utils\Curl;
 use Hyperf\HttpServer\Contract\RequestInterface;
 
 trait Base
@@ -91,50 +91,28 @@ trait Base
     }
 
     /**
-     * 包装数据
-     * @param mixed $data 要包装的数据
-     * @return false|string a JSON encoded string on success or FALSE on failure.
+     * 编码为 JSON string
+     * @param mixed $data
+     * @param int $flags
+     * @param int $depth
+     * @return string|false
      */
-    public static function pack(mixed $data): string|false
+    public static function pack(mixed $data, int $flags = JSON_UNESCAPED_UNICODE, int $depth = 512): string|false
     {
-        $json = \json_encode($data, JSON_UNESCAPED_UNICODE);
-        if (\JSON_ERROR_NONE !== \json_last_error()) {
-            throw new \InvalidArgumentException('json_encode error: ' . \json_last_error_msg());
-        }
-
-        /** @var string */
-        return $json;
+        return Json::encode($data, $flags, $depth);
     }
 
     /**
-     * 解析数据
-     * @param mixed $data 要解析的数据
+     * 解析 JSON string 为 对象或者数组
+     * @param string $json
+     * @param bool|null $associative
+     * @param int $depth
+     * @param int $flags
      * @return mixed
      */
-    public static function unpack(mixed $data): mixed
+    public static function unpack(string $json, ?bool $associative = true, int $depth = 512, int $flags = 0): mixed
     {
-        if (function_exists('json_validate')) {
-            if (!json_validate($data)) {
-                // 截取部分原始内容，避免日志过大
-                $preview = strlen($data) > 200 ? substr($data, 0, 200) . '...' : $data;
-                throw new \InvalidArgumentException(
-                    sprintf('json_validate Invalid JSON: %s. Raw data preview: %s', \json_last_error_msg(), $preview)
-                );
-            }
-
-            return \json_decode($data, true);
-        }
-
-        $data = \json_decode($data, true);
-        if (\JSON_ERROR_NONE !== \json_last_error()) {
-            // 截取部分原始内容，避免日志过大
-            $preview = strlen($data) > 200 ? substr($data, 0, 200) . '...' : $data;
-            throw new \InvalidArgumentException(
-                sprintf('json_decode Invalid JSON: %s. Raw data preview: %s', \json_last_error_msg(), $preview)
-            );
-        }
-
-        return $data;
+        return Json::decode($json, $associative, $depth, $flags);
     }
 
     /**

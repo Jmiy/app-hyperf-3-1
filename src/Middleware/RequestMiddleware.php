@@ -2,6 +2,8 @@
 
 namespace Business\Hyperf\Middleware;
 
+use Business\Hyperf\Kernel\HttpMessage\Server\Request\Parser;
+use function Hyperf\Collection\collect;
 use function Hyperf\Collection\data_set;
 use function Business\Hyperf\Utils\Collection\data_get;
 use Hyperf\Collection\Arr;
@@ -15,6 +17,7 @@ use Psr\Http\Server\MiddlewareInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use Hyperf\Context\Context;
+use Hyperf\HttpServer\Contract\RequestInterface;
 
 class RequestMiddleware implements MiddlewareInterface
 {
@@ -22,14 +25,14 @@ class RequestMiddleware implements MiddlewareInterface
     public function process(ServerRequestInterface $request, RequestHandlerInterface $handler): ResponseInterface
     {
         $serverParams = $request->getServerParams();
-        $uri = data_get($serverParams,'request_uri');//$request->getRequestUri();
+        $uri = data_get($serverParams, 'request_uri');//$request->getRequestUri();
 
-        if(false !== stripos($uri, '/favicon.ico')){
+        if (false !== stripos($uri, '/favicon.ico')) {
             return $handler->handle($request);
         }
 
         $requestData = $request->getParsedBody()
-            +$request->getQueryParams()
+            + $request->getQueryParams()
 //            +$request->getCookieParams()
 //            +$request->getUploadedFiles()
 //            +$request->getServerParams()
@@ -37,31 +40,42 @@ class RequestMiddleware implements MiddlewareInterface
 //            +$request->getHeaders()
         ;
 
+        $_requestData = Parser::normalizeParsedBody($requestData, $request, false);
+//        var_dump(__METHOD__, $_requestData);
+        if (is_object($_requestData)) {
+            $_requestData = collect($_requestData)->toArray();
+            $requestData = Arr::collapse([
+                $requestData,
+                $_requestData,
+            ]);
+        }
+//        var_dump($requestData);
+
         //var_dump($requestData,$request->getHeaderLine('X-Shopify-Hmac-Sha256'));
         /**
          * "Hyperf\HttpServer\Router\Dispatched" => array:3 [▼
-//                "status" => 1
-//                "handler" => array:3 [▼
-//                    "callback" => array:2 [▼
-//                        0 => "Business\Hyperf\Controller\DocController"
-//                        1 => "encrypt"
-//                    ]
-//                    "route" => "/api/shop/encrypt[/{id:\d+}]"
-//                    "options" => array:4 [▼
-//                        "middleware" => []
-//                        "as" => "test_user"
-//                        "validator" => array:3 [▼
-//                            "type" => "test"
-//                            "messages" => []
-//                            "rules" => []
-//                        ]
-//                        "nolog" => "test_nolog"
-//                    ]
-//                ]
-//                "params" => array:1 [▼
-//                    "id" => "996"
-//                ]
-//            ]
+         * //                "status" => 1
+         * //                "handler" => array:3 [▼
+         * //                    "callback" => array:2 [▼
+         * //                        0 => "Business\Hyperf\Controller\DocController"
+         * //                        1 => "encrypt"
+         * //                    ]
+         * //                    "route" => "/api/shop/encrypt[/{id:\d+}]"
+         * //                    "options" => array:4 [▼
+         * //                        "middleware" => []
+         * //                        "as" => "test_user"
+         * //                        "validator" => array:3 [▼
+         * //                            "type" => "test"
+         * //                            "messages" => []
+         * //                            "rules" => []
+         * //                        ]
+         * //                        "nolog" => "test_nolog"
+         * //                    ]
+         * //                ]
+         * //                "params" => array:1 [▼
+         * //                    "id" => "996"
+         * //                ]
+         * //            ]
          */
         $routeInfo = $request->getAttribute(Dispatched::class);
 
@@ -141,9 +155,14 @@ class RequestMiddleware implements MiddlewareInterface
         data_set($requestData, Constant::CLIENT_ACCESS_API_URI, $uri, false);
 
         $request = $request->withParsedBody($requestData);
-
-        Context::set('http.request.parsedData', array_merge($request->getParsedBody(), $request->getQueryParams()));//更新 协程上下文请求数据，Request 的请求数据就是从 协程上下文 key 为：http.request.parsedData 中获取的
+        //更新 上下文 请求对象
         $request = Context::set(ServerRequestInterface::class, $request);
+
+        $contractRequestInterface = Context::get(RequestInterface::class);
+        if ($contractRequestInterface) {
+            $contractRequestInterface->clearStoredParsedData();
+        }
+//        Context::set('http.request.parsedData', array_merge($request->getParsedBody(), $request->getQueryParams()));//更新 协程上下文请求数据，Request 的请求数据就是从 协程上下文 key 为：http.request.parsedData 中获取的
 
         //设置 协程上下文请求数据
         Context::set(Constant::CONTEXT_REQUEST_DATA, $requestData);

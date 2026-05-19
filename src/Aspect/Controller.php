@@ -49,7 +49,7 @@ class Controller extends AbstractAspect
 //            sprintf('[%s] %s', get_class($proceedingJoinPoint->getInstance()), $proceedingJoinPoint->methodName)
 //        );
 
-        $isNeedDataKey = true;
+        $isNeedDataKey = data_get($annotation, ['options', 'isNeedDataKey'], true);
         $responseStatusCode = data_get($result, Constant::RESPONSE_STATUS_CODE);
         if ($responseStatusCode !== null) {
             unset($result[Constant::RESPONSE_STATUS_CODE]);
