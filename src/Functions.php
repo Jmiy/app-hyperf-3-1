@@ -421,25 +421,28 @@ if (!function_exists('getClientIP')) {
                 }
             }
 
-            //获取rpc请求方式的客户端ip
-            $server = ApplicationContext::getContainer()->get(Server::class);
-            if (empty($server)) {
-                Context::set($ipContextKey, $clientIp);
-                return $clientIp;
-            }
+            try {
+                //获取rpc请求方式的客户端ip
+                $server = ApplicationContext::getContainer()->get(Server::class);
+                if (empty($server)) {
+                    Context::set($ipContextKey, $clientIp);
+                    return $clientIp;
+                }
 
-            $fd = $request->getAttribute('fd');
-            if (empty($fd)) {
-                Context::set($ipContextKey, $clientIp);
-                return $clientIp;
-            }
-            $reactorId = $request->getAttribute('fromId', -1);
+                $fd = $request->getAttribute('fd');
+                if (empty($fd)) {
+                    Context::set($ipContextKey, $clientIp);
+                    return $clientIp;
+                }
+                $reactorId = $request->getAttribute('fromId', -1);
 
-            $clientInfo = $server->getClientInfo($fd, $reactorId);
-            $clientIp = $clientInfo['remote_ip'] ?? '';
-            if (isValidIp($clientIp)) {
-                Context::set($ipContextKey, $clientIp);
-                return $clientIp;
+                $clientInfo = $server->getClientInfo($fd, $reactorId);
+                $clientIp = $clientInfo['remote_ip'] ?? '';
+                if (isValidIp($clientIp)) {
+                    Context::set($ipContextKey, $clientIp);
+                    return $clientIp;
+                }
+            } catch (\Throwable $e) {
             }
 
             Context::set($ipContextKey, $clientIp);
