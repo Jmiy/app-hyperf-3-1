@@ -40,15 +40,14 @@ class RequestMiddleware implements MiddlewareInterface
 //            +$request->getHeaders()
         ;
 
-        $_requestData = Parser::normalizeParsedBody($requestData, $request, false);
-//        var_dump(__METHOD__, $_requestData);
-        if (is_object($_requestData)) {
-            $_requestData = collect($_requestData)->toArray();
-            $requestData = Arr::collapse([
-                $requestData,
-                $_requestData,
-            ]);
-        }
+//        $_requestData = Parser::normalizeParsedBody($requestData, $request, false);
+//        if (is_object($_requestData)) {
+//            $_requestData = collect($_requestData)->toArray();
+//            $requestData = Arr::collapse([
+//                $requestData,
+//                $_requestData,
+//            ]);
+//        }
 //        var_dump($requestData);
 
         //var_dump($requestData,$request->getHeaderLine('X-Shopify-Hmac-Sha256'));
