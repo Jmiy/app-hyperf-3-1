@@ -571,21 +571,22 @@ trait BaseDb
      * @param array $tableData ['要创建的表名'=>'模板表名'] 如:['pt_ali_online_products_last' => 'pt_ali_online_products',]
      * @param bool|null $isDrop 是否删除原表 true：是；false：否；默认：false
      * @param bool|null $isThrowableDropTable 是否异常删除表 true:是 false:否 默认：false
-     * @return bool
-     * @throws \Throwable
+     * @param bool|null $isCreate 是否创建表 true：是；false：否；默认：true
+     * @return bool 执行结果
+     * @throws Throwable
      */
     public static function createTable(
         string|ConnectionInterface $connection = Constant::DB_CONNECTION_DEFAULT,
         array                      $tableData = [],
         ?bool                      $isDrop = false,
-        ?bool                      $isThrowableDropTable = false
+        ?bool                      $isThrowableDropTable = false,
+        ?bool                      $isCreate = true
     ): bool
     {
         if (empty($tableData)) {
             return false;
         }
 
-//        Db::connection($connection)->transaction(function ($_connection) use ($connection, $tableData, $isDrop) {
         $createTableSql = 'CREATE TABLE IF NOT EXISTS {fromTable} LIKE {toTable}';
         $dropTableSql = "DROP TABLE IF EXISTS {fromTable}";//
         $dbConnection = ($connection instanceof ConnectionInterface) ? $connection : DB::connection($connection);
@@ -601,7 +602,11 @@ trait BaseDb
                 if ($isDrop) {
                     $dbConnection->statement(strtr($dropTableSql, $trans));
                 }
-                $dbConnection->statement(strtr($createTableSql, $trans));//, [$fromTable, $toTable]
+
+                if ($isCreate) {
+                    $dbConnection->statement(strtr($createTableSql, $trans));//, [$fromTable, $toTable]
+                }
+
             } catch (Throwable $throwable) {
 
                 if ($retry < 3) {
@@ -622,13 +627,11 @@ trait BaseDb
 
         }
 
-//        });
-
         return true;
     }
 
     /**
-     * 创建表
+     * 删除表
      * @param string|ConnectionInterface $connection 数据库连接
      * @param array $tableData 如:['pt_ebay_online_products_20230108091643',...]
      * @return array
@@ -791,9 +794,18 @@ trait BaseDb
      * 删除表
      * @param string|array $connection 数据库连接 默认：default
      * @param string|array $table 表名 默认使用model配置的表名
-     * @return bool|int
+     * @param bool|null $isDrop 是否删除原表 true：是；false：否；默认：true
+     * @param bool|null $isThrowableDropTable 是否异常删除表 true:是 false:否 默认：false
+     * @param bool|null $isCreate 是否创建表 true：是；false：否；默认：true
+     * @return bool|int 执行结果
      */
-    public static function dropTable(string|array $connection, string|array $table)
+    public static function dropTable(
+        string|array $connection,
+        string|array $table,
+        ?bool        $isDrop = true,
+        ?bool        $isThrowableDropTable = false,
+        ?bool        $isCreate = true
+    )
     {
         $platform = $connection;
         $_table = $table;
@@ -805,11 +817,37 @@ trait BaseDb
         $tableData = [
             config(Constant::DATABASES . Constant::LINKER . $connection . Constant::LINKER . 'prefix') . $table => config(Constant::DATABASES . Constant::LINKER . $connection . Constant::LINKER . 'table_template' . Constant::LINKER . (static::getModelAlias()::TABLE_PREFIX))
         ];
-        static::createTable($connection, $tableData, true);
+
+        $rs = static::createTable($connection, $tableData, $isDrop, $isThrowableDropTable, $isCreate);
 
         $key = static::getLockKey($connection, $table, [Constant::CACHE_CREATE_TABLE_MARKER]);
         $expiryTime = 86400;//默认缓存 24小时
-        return static::getCacheDriver(Constant::CACHE_CONNECTION_POOL_TASK)->set($key, 1, $expiryTime);
+//        var_dump(__METHOD__, $key, $isDrop, $isThrowableDropTable, $isCreate);
+
+        $retryNum = 0;
+        dropTableMarkerBeginning:
+        try {
+            $redis = static::getCacheDriver(Constant::CACHE_CONNECTION_POOL_TASK);
+            $redis->delete($key);
+
+            if ($isCreate) {
+                $redis->set($key, 1, $expiryTime);
+            }
+        } catch (Throwable $throwable) {
+            if ($retryNum < 10) {
+                ++$retryNum;
+                Coroutine::sleep(rand(1, 10));
+                goto dropTableMarkerBeginning;
+            }
+
+            go(function () use ($throwable) {
+                throw $throwable;
+            });
+        }
+
+
+        return $rs;
+
 
 //        $method = __FUNCTION__;
 //        $lockParameters = [
