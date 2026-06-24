@@ -69,16 +69,16 @@ class QueueRedisDriver
             return true;
         }
 
+        $microtime = microtime(true);
         if ($delay === 0) {
-
             if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
-                return $redis->zAdd($channel->getWaiting(), time(), $data) > 0;
+                return (bool) $redis->zAdd($channel->getWaiting(), $microtime, $data);
             } else {
                 return (bool)$redis->lPush($channel->getWaiting(), $data);
             }
         }
 
-        return $redis->zAdd($channel->getDelayed(), time() + $delay, $data) > 0;
+        return (bool) $redis->zAdd($channel->getDelayed(), $microtime + $delay, $data);
     }
 
     /**
@@ -109,7 +109,6 @@ class QueueRedisDriver
         if ($handleTimeout == -1) {
             $handleTimeout = static::getQueueBusinessConfig(['handle_timeout'], $queueConnection, 86400);
         }
-//        var_dump(__METHOD__, 'handleTimeout==>' . $handleTimeout);
 
         $options = ['LIMIT' => [0, $limit]];
         //将延迟队列中到期的消息压入正在执行队列
@@ -125,17 +124,36 @@ class QueueRedisDriver
         $reservedIsPush = static::getQueueBusinessConfig(['reserved', 'isPush'], $queueConnection, true);
         $data = [];
         if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
-            $data = static::move($poolName, $channel->getWaiting(), '', $queueConnection, $options);
-            if ($reservedIsPush === true) {
-                foreach ($data as $item) {
+
+//            $data = static::move($poolName, $channel->getWaiting(), '', $queueConnection, $options);
+//            if ($reservedIsPush === true) {
+//                foreach ($data as $item) {
+//                    //将待执行的消息压入正在执行队列
+//                    $redis->zadd($channel->getReserved(), time() + $handleTimeout, $item);
+//                }
+//            }
+
+            for ($i = 0; $i < $limit; $i++) {
+//                $f = microtime(true);
+                $_res = $redis->bzPopMin($channel->getWaiting(), 2);
+//                var_dump(
+//                    $channel->getWaiting(),
+//                    $_res,
+//                    (number_format(microtime(true) - $f, 8, '.', '') * 1000) . ' ms'
+//                );
+                if (empty($_res)) {
+                    break;
+                }
+
+                list($key, $item, $score) = $_res;
+                $data[] = $item;
+                if ($reservedIsPush === true) {
                     //将待执行的消息压入正在执行队列
                     $redis->zadd($channel->getReserved(), time() + $handleTimeout, $item);
                 }
             }
-
         } else {
             for ($i = 0; $i < $limit; $i++) {
-
                 $res = $redis->brPop($channel->getWaiting(), 2);
                 if (!isset($res[1])) {//如果待执行队列没有数据了，就跳出整个循环
                     break;
@@ -380,7 +398,6 @@ class QueueRedisDriver
         return $this->retrySeconds[$attempts - 1] ?? end($this->retrySeconds);
     }
 
-
     /**
      * Move message to the waiting queue.
      */
@@ -432,7 +449,8 @@ class QueueRedisDriver
                 if ($redis->zRem($from, $job) > 0) {
                     if (!empty($to)) {
                         if (false !== strpos($to, ':waiting') && static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
-                            $redis->zAdd($to, time(), $job);
+//                            $redis->zAdd($to, time(), $job);
+                            $redis->zAdd($to, microtime(true), $job);
                         } else {
                             $redis->lPush($to, $job);
                         }
