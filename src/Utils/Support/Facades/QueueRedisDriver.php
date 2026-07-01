@@ -65,7 +65,14 @@ class QueueRedisDriver
         $channel = static::getChannelConfig($channel);
         $redis = Redis::getRedis($poolName);
 
-        if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset' && false !== $redis->zScore($channel->getReserved(), $data)) {
+        // 如果待执行队列是使用有序集合实现，并且当前压入队列的元素已经存在，就直接返回压入队列成功
+        if (
+            static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset' &&
+            (
+                $redis->zScore($channel->getWaiting(), $data) !== false
+                || $redis->zScore($channel->getDelayed(), $data) !== false
+            )
+        ) {
             return true;
         }
 
@@ -74,7 +81,7 @@ class QueueRedisDriver
             if (static::getQueueBusinessConfig('waiting', $queueConnection) === 'zset') {
                 return (bool) $redis->zAdd($channel->getWaiting(), $microtime, $data);
             } else {
-                return (bool)$redis->lPush($channel->getWaiting(), $data);
+                return (bool) $redis->lPush($channel->getWaiting(), $data);
             }
         }
 

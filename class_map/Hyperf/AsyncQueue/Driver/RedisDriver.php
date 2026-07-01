@@ -65,12 +65,13 @@ class RedisDriver extends Driver
         $data = $this->packer->pack($message);
 
         $waitingType = data_get($this->config, ['waiting']);
+        // 如果待执行队列是使用有序集合实现，并且当前压入队列的元素已经存在，就直接返回压入队列成功
         if (
             $waitingType === 'zset' &&
             (
-                false !== $this->redis->zScore($this->channel->getWaiting(), $data)
-                || false !== $this->redis->zScore($this->channel->getDelayed(), $data)
-                || false !== $this->redis->zScore($this->channel->getReserved(), $data)
+                $this->redis->zScore($this->channel->getWaiting(), $data) !== false
+                || $this->redis->zScore($this->channel->getDelayed(), $data) !== false
+//                || false !== $this->redis->zScore($this->channel->getReserved(), $data)
             )
         ) {
             return true;
@@ -79,10 +80,9 @@ class RedisDriver extends Driver
         $microtime = microtime(true);
         if ($delay === 0) {
             if ($waitingType === 'zset') {
-//                return $this->redis->zAdd($this->channel->getWaiting(), time(), $data) > 0;
-                return $this->redis->zAdd($this->channel->getWaiting(), $microtime, $data) > 0;
+                return (bool) $this->redis->zAdd($this->channel->getWaiting(), $microtime, $data);
             } else {
-                return (bool)$this->redis->lPush($this->channel->getWaiting(), $data);
+                return (bool) $this->redis->lPush($this->channel->getWaiting(), $data);
             }
         }
 
