@@ -15,7 +15,7 @@ use Hyperf\AsyncQueue\Driver\ChannelConfig;
 class QueueRedisDriver
 {
 
-    public static function getKey(string|array $connection, string|array $table, array $lockKeys = [])
+    public static function getKey(string|array $connection, mixed $table, array $lockKeys = [])
     {
         $connection = is_array($connection) ? $connection : [$connection];
         array_unshift($connection, config('app_env'));
