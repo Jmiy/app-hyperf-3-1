@@ -10,36 +10,59 @@ declare(strict_types=1);
  * @license  https://github.com/hyperf/hyperf/blob/master/LICENSE
  */
 
-namespace Business\Hyperf\Rpc\JsonRpc\Consumers;
+namespace Business\Hyperf\Rpc\Grpc\Consumers;
 
 use Business\Hyperf\Constants\Constant as BusinessConstant;
 use Business\Hyperf\Rpc\Consumers\BaseConsumer;
 use Hyperf\Collection\Arr;
-use Hyperf\Retry\Annotation\Retry;
+use Hyperf\Grpc\Parser;
+
+use function Hyperf\Config\config;
 
 // 服务重试: https://hyperf.wiki/3.0/#/zh-cn/retry
-use function Hyperf\Config\config;
 
 // 服务熔断及降级: https://hyperf.wiki/3.0/#/zh-cn/circuit-breaker
 
-class JsonRpcTcpLengthCheckService extends BaseConsumer
+class GRpcService extends BaseConsumer
 {
     /**
      * The service name of the target service.
      */
-    public static string $serviceName = 'JsonRpcTcpLengthCheckService';
+    public static string $serviceName = 'grpc.GRpc';
 
     /**
      * The protocol of the target service, this protocol name
      * needs to register into \Hyperf\Rpc\ProtocolManager.
      */
-    public static string $protocol = 'jsonrpc-tcp-length-check';
+    public static string $protocol = 'grpc';
 
     /**
      * The load balancer of the client, this name of the load balancer
      * needs to register into \Hyperf\LoadBalancer\LoadBalancerManager.
      */
     public static string $loadBalancer = 'random';
+
+    public static function __callStatic($method, $args)
+    {
+        $deserialize = $args[0];
+        unset($args[0]);
+
+        $args = array_values($args);
+
+        $data = parent::__callStatic($method, $args);
+
+        //        var_dump(__METHOD__, $data);
+
+        if (is_array($data) && array_key_exists('code', $data)) {
+            return $data;
+        }
+
+        if (count($deserialize) < 2) {
+            $deserialize[] = 'decode';
+        }
+
+        return Parser::deserializeMessage($deserialize, $data);
+    }
 
     /**
      * 获取 rpc 上下文.
@@ -51,7 +74,7 @@ class JsonRpcTcpLengthCheckService extends BaseConsumer
         //        $serviceName = config('app_name');
         //        $context = [
         //            BusinessConstant::RPC_TOKEN_KEY => config('authorization.' . $serviceName . '1.' . BusinessConstant::RPC_TOKEN_KEY),
-        //            'x-jmiy-service' => $serviceName,
+        //            BusinessConstant::RPC_SERVICE_APP_KEY => $serviceName,//服务提供者
         //        ];
 
         $_context = parent::getRpcContext();
@@ -59,5 +82,3 @@ class JsonRpcTcpLengthCheckService extends BaseConsumer
         return Arr::collapse([$_context, $context]);
     }
 }
-
-

@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package grpc;
+
+option php_generic_services = true;
+option php_namespace = "Business\\Hyperf\\Rpc\\Grpc\\Protobuf\\Message";
+option php_metadata_namespace = "Business\\Hyperf\\Rpc\\Grpc\\Protobuf\\GPBMetadata";
+
+// request sent to grpc server protoc --php_out=/mnt/hgfs/work/bluelans/Advertising/vendor/jmiy/business-hyperf-3-1/src/Rpc/Grpc/ /mnt/hgfs/work/bluelans/Advertising/vendor/jmiy/business-hyperf-3-1/src/Rpc/Grpc/grpc.proto
+message Req {
+  string data = 2;
+}
+
+message Reply {
+  string data = 1;
+}
+// The service definition.
+service Grpc {
+  rpc TransIn(Req) returns (Reply) {}
+  rpc TransOut(Req) returns (Reply) {}
+  rpc TransInRevert(Req) returns (Reply) {}
+  rpc TransOutRevert(Req) returns (Reply) {}
+  rpc TransInConfirm(Req) returns (Reply) {}
+  rpc TransOutConfirm(Req) returns (Reply) {}
+  rpc XaNotify(Reply) returns (Reply) {}
+
+  rpc TransInXa(Req) returns (Reply) {}
+  rpc TransOutXa(Req) returns (Reply) {}
+  rpc TransInTcc(Req) returns (Reply) {}
+  rpc TransOutTcc(Req) returns (Reply) {}
+  rpc TransInTccNested(Req) returns (Reply) {}
+
+  rpc TransInBSaga(Req) returns (Reply) {}
+  rpc TransOutBSaga(Req) returns (Reply) {}
+  rpc TransInRevertBSaga(Req) returns (Reply) {}
+  rpc TransOutRevertBSaga(Req) returns (Reply) {}
+  rpc TransOutHeaderYes(Req) returns (Reply) {}
+  rpc TransOutHeaderNo(Req) returns (Reply) {}
+
+  rpc TransInRedis(Req) returns (Reply) {}
+  rpc TransOutRedis(Req) returns (Reply) {}
+  rpc TransInRevertRedis(Req) returns (Reply) {}
+  rpc TransOutRevertRedis(Req) returns (Reply) {}
+
+  rpc QueryPrepared(Req) returns (Reply) {}
+  rpc QueryPreparedB(Req) returns (Reply) {}
+  rpc QueryPreparedRedis(Req) returns (Reply) {}
+}
+

@@ -17,13 +17,10 @@ use Business\Hyperf\Rpc\Consumers\BaseConsumer;
 use Hyperf\Collection\Arr;
 use Hyperf\Retry\Annotation\Retry;
 
-//服务重试: https://hyperf.wiki/3.0/#/zh-cn/retry
-use Hyperf\CircuitBreaker\Annotation\CircuitBreaker;
+// 服务重试: https://hyperf.wiki/3.0/#/zh-cn/retry
 use function Hyperf\Config\config;
-use Hyperf\Rpc\Context;
-use function Hyperf\Support\call;
 
-//服务熔断及降级: https://hyperf.wiki/3.0/#/zh-cn/circuit-breaker
+// 服务熔断及降级: https://hyperf.wiki/3.0/#/zh-cn/circuit-breaker
 
 class JsonRpcService extends BaseConsumer
 {
@@ -45,36 +42,22 @@ class JsonRpcService extends BaseConsumer
     public static string $loadBalancer = 'random';
 
     /**
-     * 获取 rpc 上下文
+     * 获取 rpc 上下文.
      * @return array
      */
     public static function getRpcContext()
     {
-//        $serviceName = config('app_name');
-//        $context = [
-//            BusinessConstant::RPC_TOKEN_KEY => config('authorization.' . $serviceName . '.' . BusinessConstant::RPC_TOKEN_KEY),
-//            'x-jmiy-service' => $serviceName,
-//        ];
-
-        //ip限制的场景
-//        $context = [
-//            BusinessConstant::RPC_TOKEN_KEY => config('authorization.' . $serviceName . '.' . BusinessConstant::RPC_TOKEN_KEY),
-//            'x-jmiy-service' => 'product-listing',
-//        ];
-
-        //签名认证的场景
-//        $context = [
-//            BusinessConstant::RPC_TOKEN_KEY => config('authorization.product-listing.' . BusinessConstant::RPC_TOKEN_KEY),
-//            'x-jmiy-service' => $serviceName,
-//        ];
-
         $context = [];
+        //        $serviceName = config('app_name');
+        //        $context = [
+        //            BusinessConstant::RPC_TOKEN_KEY => config('authorization.' . $serviceName . '1.' . BusinessConstant::RPC_TOKEN_KEY),
+        //            'x-jmiy-service' => $serviceName,
+        //        ];
 
         $_context = parent::getRpcContext();
 
         return Arr::collapse([$_context, $context]);
     }
-
 }
 
 

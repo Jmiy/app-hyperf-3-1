@@ -16,13 +16,12 @@ use Business\Hyperf\Constants\Constant as BusinessConstant;
 use Business\Hyperf\Rpc\Consumers\BaseConsumer;
 use Hyperf\Collection\Arr;
 use Hyperf\Retry\Annotation\Retry;
-
-//服务重试: https://hyperf.wiki/3.0/#/zh-cn/retry
-use Hyperf\CircuitBreaker\Annotation\CircuitBreaker;
-use function Hyperf\Config\config;
+// 服务重试: https://hyperf.wiki/3.0/#/zh-cn/retry
 use Hyperf\RpcMultiplex\Constant;
 
-//服务熔断及降级: https://hyperf.wiki/3.0/#/zh-cn/circuit-breaker
+use function Hyperf\Config\config;
+
+// 服务熔断及降级: https://hyperf.wiki/3.0/#/zh-cn/circuit-breaker
 
 class RpcMultiplexService extends BaseConsumer
 {
@@ -44,12 +43,12 @@ class RpcMultiplexService extends BaseConsumer
     public static string $loadBalancer = 'random';
 
     /**
-     * 获取 rpc 上下文
+     * 获取 rpc 上下文.
      * @return array
      */
     public static function getRpcContext()
     {
-//        $serviceName = config('app_name');
+        //        $serviceName = config('app_name');
 //        $context = [
 //            BusinessConstant::RPC_TOKEN_KEY => config('authorization.' . $serviceName . '.' . BusinessConstant::RPC_TOKEN_KEY),
 //            'x-jmiy-service' => $serviceName,
@@ -68,6 +67,11 @@ class RpcMultiplexService extends BaseConsumer
 //        ];
 
         $context = [];
+        //        $serviceName = config('app_name');
+        //        $context = [
+        //            BusinessConstant::RPC_TOKEN_KEY => config('authorization.' . $serviceName . '1.' . BusinessConstant::RPC_TOKEN_KEY),
+        //            'x-jmiy-service' => $serviceName,
+        //        ];
 
         $_context = parent::getRpcContext();
 
