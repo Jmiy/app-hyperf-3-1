@@ -71,7 +71,6 @@ class RedisDriver extends Driver
             (
                 $this->redis->zScore($this->channel->getWaiting(), $data) !== false
                 || $this->redis->zScore($this->channel->getDelayed(), $data) !== false
-//                || false !== $this->redis->zScore($this->channel->getReserved(), $data)
             )
         ) {
             return true;
@@ -94,7 +93,7 @@ class RedisDriver extends Driver
         $message = make(JobMessage::class, [$job]);
         $data = $this->packer->pack($message);
 
-        return (bool)$this->redis->zRem($this->channel->getDelayed(), $data);
+        return (bool) $this->redis->zRem($this->channel->getDelayed(), $data);
     }
 
     public function pop(): array
@@ -104,44 +103,28 @@ class RedisDriver extends Driver
 
         $waitingType = data_get($this->config, ['waiting']);
         if ($waitingType === 'zset') {
-//            $options = ['LIMIT' => [0, 1]];
-//            $expired = $this->move($this->channel->getWaiting(), '', $options);
-//
-//            if (empty($expired)) {
-//                Coroutine::sleep($this->timeout);
-//                return [false, null];
-//            }
-//
-//            foreach ($expired as $job) {
-//                $res = [true, $job];
-//            }
-
-//            $f = microtime(true);
-//            var_dump(
-//                $this->channel->getWaiting(),
-//                $_res,
-//                (number_format(microtime(true) - $f, 8, '.', '') * 1000) . ' ms'
-//            );
             $_res = $this->redis->bzPopMin($this->channel->getWaiting(), $this->timeout);
             if (empty($_res)) {
+                unset($_res);
                 return [false, null];
             }
 
-            list($key, $job, $score) = $_res;
+            [$key, $job, $score] = $_res;
             $res = [true, $job];
+            unset($key, $job, $score, $_res);
         } else {
             $res = $this->redis->brPop($this->channel->getWaiting(), $this->timeout);
-            if (!isset($res[1])) {
+            if (! isset($res[1])) {
+                unset($res);
                 return [false, null];
             }
         }
-
         $data = $res[1];
 
         $this->redis->zadd($this->channel->getReserved(), time() + $this->handleTimeout, $data);
 
         $message = $this->packer->unpack($data);
-        if (!$message) {
+        if (! $message) {
             return [false, null];
         }
 
@@ -156,7 +139,7 @@ class RedisDriver extends Driver
     public function fail(mixed $data): bool
     {
         if ($this->remove($data)) {
-            return (bool)$this->redis->lPush($this->channel->getFailed(), (string)$data);
+            return (bool) $this->redis->lPush($this->channel->getFailed(), (string) $data);
         }
         return false;
     }
@@ -165,7 +148,7 @@ class RedisDriver extends Driver
     {
         $channel = $this->channel->getFailed();
         if ($queue) {
-            if (!in_array($queue, ['timeout', 'failed'])) {
+            if (! in_array($queue, ['timeout', 'failed'])) {
                 throw new InvalidQueueException(sprintf('Queue %s is not supported.', $queue));
             }
 
@@ -182,7 +165,7 @@ class RedisDriver extends Driver
             }
 
             $res = $this->redis->rpop($channel, $listLen);
-            if (empty($res) || !is_array($res)) {//如果待执行队列没有数据了，就跳出整个循环
+            if (empty($res) || ! is_array($res)) {//如果待执行队列没有数据了，就跳出整个循环
                 return $num;
             }
 
@@ -212,7 +195,7 @@ class RedisDriver extends Driver
             $channel = $this->channel->get($queue);
         }
 
-        return (bool)$this->redis->del($channel);
+        return (bool) $this->redis->del($channel);
     }
 
     public function info(): array
@@ -239,12 +222,12 @@ class RedisDriver extends Driver
 
         $delay = time() + $this->getRetrySeconds($message->getAttempts());
 
-        return (bool)$this->redis->zAdd($this->channel->getDelayed(), $delay, $data);
+        return (bool) $this->redis->zAdd($this->channel->getDelayed(), $delay, $data);
     }
 
     protected function getRetrySeconds(int $attempts): int
     {
-        if (!is_array($this->retrySeconds)) {
+        if (! is_array($this->retrySeconds)) {
             return $this->retrySeconds;
         }
 
@@ -260,38 +243,28 @@ class RedisDriver extends Driver
      */
     protected function remove(mixed $data): bool
     {
-        return (bool)$this->redis->zrem($this->channel->getReserved(), (string)$data);
+        return (bool) $this->redis->zrem($this->channel->getReserved(), (string) $data);
     }
 
     /**
      * Move message to the waiting queue.
      */
-    protected function move(string $from, string $to, array $options = ['LIMIT' => [0, 100]]): mixed
+    protected function move(string $from, string $to): void
     {
         $now = time();
-//        $options = ['LIMIT' => [0, 100]];
-        $options = Arr::collapse([
-            ['LIMIT' => [0, 100]],
-            $options
-        ]);
-
-        $data = [];
-        if ($expired = $this->redis->zrevrangebyscore($from, (string)$now, '-inf', $options)) {
+        $options = ['LIMIT' => [0, 100]];
+        if ($expired = $this->redis->zrevrangebyscore($from, (string) $now, '-inf', $options)) {
             foreach ($expired as $job) {
                 if ($this->redis->zRem($from, $job)) {
                     if (!empty($to)) {
                         if ($to == $this->channel->getWaiting() && data_get($this->config, ['waiting']) === 'zset') {
-//                            $this->redis->zAdd($to, time(), $job);
                             $this->redis->zAdd($to, microtime(true), $job);
                         } else {
                             $this->redis->lPush($to, $job);
                         }
                     }
-                    $data[] = $job;
                 }
             }
         }
-
-        return $data;
     }
 }
